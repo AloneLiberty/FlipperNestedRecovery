@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package PB_Storage;
+option java_package = "com.flipperdevices.protobuf.storage";
+
+message File {
+    enum FileType {
+        FILE = 0;   // default value
+        DIR = 1;
+    }
+    FileType type = 1;
+    string name = 2;
+    uint32 size = 3;
+    bytes data = 4;
+}
+
+message InfoRequest {
+    string path = 1;
+}
+
+message InfoResponse {
+    uint64 total_space = 1;
+    uint64 free_space = 2;
+}
+
+message ListRequest {
+    string path = 1;
+}
+
+message ListResponse {
+    repeated File file = 1;
+}
+
+message ReadRequest {
+    string path = 1;
+}
+
+message ReadResponse {
+    File file = 1;
+}
+
+message WriteRequest {
+    string path = 1;
+    File file = 2;
+}
+
+message DeleteRequest {
+    string path = 1;
+    bool recursive = 2;
+}
