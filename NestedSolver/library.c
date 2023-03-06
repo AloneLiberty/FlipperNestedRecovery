@@ -218,11 +218,9 @@ typedef struct {
 } InfoList_t;
 
 static int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, const uint8_t *parity) {
-    return (
-                   (oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) && \
+    return ((oddparity8((Nt >> 24) & 0xFF) == ((parity[0]) ^ oddparity8((NtEnc >> 24) & 0xFF) ^ BIT(Ks1, 16))) && \
                (oddparity8((Nt >> 16) & 0xFF) == ((parity[1]) ^ oddparity8((NtEnc >> 16) & 0xFF) ^ BIT(Ks1, 8))) && \
-               (oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1, 0)))
-           ) ? 1 : 0;
+               (oddparity8((Nt >> 8) & 0xFF) == ((parity[2]) ^ oddparity8((NtEnc >> 8) & 0xFF) ^ BIT(Ks1, 0)))) ? 1 : 0;
 }
 
 uint32_t pow_calc(uint32_t num, uint32_t deg) {
@@ -363,8 +361,9 @@ void *nested_wrapper(void *arg) {
     }
 }
 
-char *run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_t nt1, uint32_t ks1,
-                          uint32_t par1, int from, int to) {
+char *
+run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_t nt1, uint32_t ks1, uint32_t par1,
+                int from, int to) {
     if (ks0 == ks1) {
         return calloc(1, 1);
     }
@@ -426,45 +425,37 @@ char *run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, u
     return calloc(1, 1);
 }
 
-static PyObject* run_nested_python(PyObject* self, PyObject* args){
+static PyObject *run_nested_python(PyObject *self, PyObject *args) {
     uint64_t uid, nt0, ks0, nt1, ks1;
     if (!PyArg_ParseTuple(args, "lllll", &uid, &nt0, &ks0, &nt1, &ks1)) {
         return NULL;
     }
 
-    char* output = run_nested((uint32_t)uid, (uint32_t)nt0, (uint32_t)ks0, (uint32_t)nt1, (uint32_t)ks1);
+    char *output = run_nested((uint32_t) uid, (uint32_t) nt0, (uint32_t) ks0, (uint32_t) nt1, (uint32_t) ks1);
 
     return Py_BuildValue("s", output);
 }
 
-static PyObject* run_full_nested_python(PyObject* self, PyObject* args){
+static PyObject *run_full_nested_python(PyObject *self, PyObject *args) {
     uint64_t uid, nt0, ks0, par0, nt1, ks1, par1;
     int from, to;
     if (!PyArg_ParseTuple(args, "lllllllii", &uid, &nt0, &ks0, &par0, &nt1, &ks1, &par1, &from, &to)) {
         return NULL;
     }
 
-    char* output = run_full_nested((uint32_t)uid, (uint32_t)nt0, (uint32_t)ks0, (uint32_t)par0, (uint32_t)nt1, (uint32_t)ks1, (uint32_t)par1, from, to);
+    char *output = run_full_nested((uint32_t) uid, (uint32_t) nt0, (uint32_t) ks0, (uint32_t) par0, (uint32_t) nt1,
+                                   (uint32_t) ks1, (uint32_t) par1, from, to);
 
     return Py_BuildValue("s", output);
 }
 
-static PyMethodDef nested_methods[] = {
-    {"run_nested",  run_nested_python, METH_VARARGS,
-     "Run nested"},
-    {"run_full_nested",  run_full_nested_python, METH_VARARGS,
-     "Run full nested"},
-    {NULL, NULL, 0, NULL}        /* Sentinel */
+static PyMethodDef nested_methods[] = {{"run_nested",      run_nested_python,      METH_VARARGS, "Run nested"},
+                                       {"run_full_nested", run_full_nested_python, METH_VARARGS, "Run full nested"},
+                                       {NULL, NULL,                                0, NULL}        /* Sentinel */
 };
 
-static struct PyModuleDef nested_module = {
-    PyModuleDef_HEAD_INIT,
-    "nested",
-    NULL,
-    -1,
-    nested_methods
-};
+static struct PyModuleDef nested_module = {PyModuleDef_HEAD_INIT, "nested", NULL, -1, nested_methods};
 
-PyMODINIT_FUNC PyInit_nested(void){
+PyMODINIT_FUNC PyInit_nested(void) {
     return PyModule_Create(&nested_module);
 }

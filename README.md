@@ -23,4 +23,14 @@ Found 1 key(s): ['ffffffffffff']
 ...
 Found potential 32 keys, use "Check found keys" in app
 
+$ FlipperNested --help
+usage: FlipperNested [-h] [--uid UID] [--save | --no-save]
+
+Calculate keys after Nested attack
+
+options:
+  -h, --help         show this help message and exit
+  --uid UID          Recover only for this UID
+  --save, --no-save  Debug: Save keys/nonces from Flipper (default: False)
+
 ```

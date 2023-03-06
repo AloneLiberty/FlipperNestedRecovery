@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="FlipperNested",
-    version="1.0.0",
+    version="1.0.1",
     author="AloneLiberty",
     description="Recover keys from collected nonces",
     long_description=long_description,
@@ -20,7 +20,7 @@ setuptools.setup(
     install_requires=['protobuf', 'pyserial'],
     ext_modules=[nested_solver],
     packages=["FlipperNested"],
-    python_requires='>=3.4',
+    python_requires='>=3.9',
     classifiers=[
         "Programming Language :: Python :: 3.11",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

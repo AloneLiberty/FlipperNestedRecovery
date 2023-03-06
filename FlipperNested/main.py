@@ -24,16 +24,20 @@ class FlipperNested:
     def __init__(self):
         self.connection = FlipperBridge()
 
-    def crack_nonces(self):
+    def crack_nonces(self, args=None):
         bruteforce = False
         bruteforce_distance = 0
         bruteforce_depth = 0
+        uid = 0
+        target_uid = ''
+        save = False
+        if args:
+            target_uid = args.uid
+            save = args.save
 
         for file in self.connection.get_files("/ext/nfc/nested"):
-            if file['name'].endswith(".nonces"):
+            if file['name'].endswith(".nonces") and target_uid in file['name']:
                 content = self.connection.file_read("/ext/nfc/nested/" + file['name']).decode()
-
-                uid = 0
 
                 nonce = {
                     'A': {},
@@ -47,6 +51,9 @@ class FlipperNested:
 
                 print('Checking', file['name'])
                 lines = content.splitlines()[1:]
+                if save:
+                    open(file['name'], 'w+').write('\n'.join(lines))
+                    print("Saved nonces to", file['name'])
 
                 if "Nested: Delay" in content:
                     print(
@@ -128,6 +135,14 @@ class FlipperNested:
                 if not key_count:
                     print("No keys found")
                 else:
-                    self.connection.file_write("/ext/nfc/nested/" + file['name'].replace('nonces', 'keys'),
-                                               output.encode())
+                    if save:
+                        open(file['name'].replace('nonces', 'keys'), 'w+').write(output)
+                        print("Saved keys to", file['name'].replace('nonces', 'keys'))
+                    try:
+                        self.connection.file_write("/ext/nfc/nested/" + file['name'].replace('nonces', 'keys'),
+                                                   output.encode())
+                    except:
+                        open(file['name'].replace('nonces', 'keys'), 'w+').write(output)
+                        print("Lost connection to Flipper!")
+                        print("Saved keys to", file['name'].replace('nonces', 'keys'))
                     print(f'Found potential {str(key_count)} keys, use "Check found keys" in app')
