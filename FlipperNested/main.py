@@ -51,6 +51,10 @@ class FlipperNested:
 
                 print('Checking', file['name'])
                 lines = content.splitlines()[1:]
+                if lines.pop(0) != "Version: 1":
+                    print("Invalid version for", file['name'])
+                    print("Consider updating app or recovery script")
+                    continue
                 if save:
                     open(file['name'], 'w+').write('\n'.join(lines))
                     print("Saved nonces to", file['name'])

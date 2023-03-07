@@ -1,6 +1,7 @@
 import serial
 import serial.tools.list_ports
-from flipperzero_protobuf.flipperzero_protobuf_compiled import flipper_pb2, storage_pb2
+import FlipperNested.proto.storage_pb2 as storage_pb2
+import FlipperNested.proto.flipper_pb2 as flipper_pb2
 from google.protobuf.internal.encoder import _VarintBytes
 from google.protobuf.json_format import MessageToDict
 
