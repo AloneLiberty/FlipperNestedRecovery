@@ -67,11 +67,11 @@ class FlipperNested:
                         content.strip())
                     bruteforce = True
                     print("[Info] Please select depth of check")
-                    print("[1] Fast: +-25 values")
-                    print("[2] Normal: +-50 values [Recommended]")
-                    print("[3] Full: +-100 values")
+                    print("[1] Fast: +-25 values [Not recommended]")
+                    print("[2] Normal: +-50 values")
+                    print("[3] Full: +-100 values [Recommended, ~4Gb RAM usage]")
                     bruteforce_depth = int(input("[1-3] > "))
-                    if bruteforce_depth < 1 or bruteforce_depth > 4:
+                    if bruteforce_depth < 1 or bruteforce_depth > 3:
                         print("Invalid input, using Normal depth")
                         bruteforce_depth = 2
                     bruteforce_distance = int(result.groups()[0])

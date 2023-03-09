@@ -204,15 +204,11 @@ char *run_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t nt1, uint32_
 }
 
 typedef struct {
-    uint32_t first;
-    uint32_t second;
     uint32_t uid;
     uint32_t nt0;
     uint32_t ks0;
     uint32_t nt1;
     uint32_t ks1;
-    uint8_t *par_array_first;
-    uint8_t *par_array_second;
     char *keys;
     bool free;
 } InfoList_t;
@@ -251,9 +247,6 @@ uint8_t *decode_parity(uint32_t parity) {
 
 bool nested_calculate(InfoList_t *arg) {
     InfoList_t *info = arg;
-    uint32_t first = info->first;
-    uint32_t second = info->second;
-
     struct Crypto1State *p1, *p2, *p3, *p4;
     StateList_t statelists[2];
 
@@ -261,17 +254,11 @@ bool nested_calculate(InfoList_t *arg) {
         statelists[i].uid = info->uid;
     }
 
-    statelists[0].nt_enc = prng_successor(info->nt0, first);
+    statelists[0].nt_enc = info->nt0;
     statelists[0].ks1 = info->ks0 ^ statelists[0].nt_enc;
 
-    statelists[1].nt_enc = prng_successor(info->nt1, second);
+    statelists[1].nt_enc = info->nt1;
     statelists[1].ks1 = info->ks1 ^ statelists[1].nt_enc;
-
-    if (!valid_nonce(statelists[0].nt_enc, info->ks0, statelists[0].ks1, info->par_array_first) ||
-        !valid_nonce(statelists[1].nt_enc, info->ks1, statelists[1].ks1, info->par_array_second)) {
-
-        return false;
-    }
 
     // create and run worker threads
     statelists[0].head.slhead = lfsr_recovery32(statelists[0].ks1, statelists[0].nt_enc ^ statelists[0].uid);
@@ -344,6 +331,9 @@ bool nested_calculate(InfoList_t *arg) {
                 strncat(info->keys, &ch[j], 1);
             }
         }
+    } else {
+        free(statelists[0].head.slhead);
+        free(statelists[1].head.slhead);
     }
 
     if (statelists[0].len) {
@@ -364,65 +354,67 @@ void *nested_wrapper(void *arg) {
 char *
 run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_t nt1, uint32_t ks1, uint32_t par1,
                 int from, int to) {
+    char* empty = calloc(1, 1);
     if (ks0 == ks1) {
-        return calloc(1, 1);
+        return empty;
     }
     pthread_t thread_id[to];
-    uint32_t found_second[to];
-    InfoList_t *found_info = malloc(sizeof(InfoList_t) * 2);
+    uint32_t found_second_array[to];
+    InfoList_t *found_info = malloc(sizeof(InfoList_t));
+    uint32_t found_first, found_second;
     bool found = false;
     uint32_t i;
+
     for (int first = from; first < to; first++) {
         i = 0;
         void *status = NULL;
-//        printf("Trying %u\n", first);
+
         for (int second = from; second < to; second++) {
+            uint8_t* par0_decoded = decode_parity(par0);
+            uint8_t* par1_decoded = decode_parity(par1);
+            if (!valid_nonce(prng_successor(nt0, first), ks0, ks0 ^ prng_successor(nt0, first), par0_decoded) ||
+                !valid_nonce(prng_successor(nt1, second), ks1, ks1 ^ prng_successor(nt1, second), par1_decoded)) {
+                free(par0_decoded);
+                free(par1_decoded);
+                continue;
+            }
+
             InfoList_t *info = malloc(sizeof(InfoList_t));
-            info->first = first;
-            info->second = second;
             info->uid = uid;
-            info->nt0 = nt0;
+            info->nt0 = prng_successor(nt0, first);
             info->ks0 = ks0;
-            info->nt1 = nt1;
+            info->nt1 = prng_successor(nt1, second);
             info->ks1 = ks1;
             info->free = true;
-            uint8_t *par_array_first = decode_parity(par0);
-            uint8_t *par_array_second = decode_parity(par1);
-            info->par_array_first = par_array_first;
-            info->par_array_second = par_array_second;
-            found_second[i] = second;
+
+            found_second_array[i] = second;
             pthread_create(&thread_id[i], NULL, nested_wrapper, info);
             i++;
         }
 
-
         for (uint32_t j = 0; j < i; j++) {
             pthread_join(thread_id[j], &status);
             if (status != 0) {
-                found_info->first = first;
-                found_info->second = found_second[j];
+                found_first = first;
+                found_second = found_second_array[j];
                 found = true;
             }
         }
 
         if (found) {
             found_info->uid = uid;
-            found_info->nt0 = nt0;
+            found_info->nt0 = prng_successor(nt0, found_first);
             found_info->ks0 = ks0;
-            found_info->nt1 = nt1;
+            found_info->nt1 = prng_successor(nt1, found_second);
             found_info->ks1 = ks1;
             found_info->keys = calloc(256, sizeof(char) * 14);
-            uint8_t *par_array_first = decode_parity(par0);
-            uint8_t *par_array_second = decode_parity(par1);
-            found_info->par_array_first = par_array_first;
-            found_info->par_array_second = par_array_second;
             found_info->free = false;
             nested_calculate(found_info);
             return found_info->keys;
         }
     }
 
-    return calloc(1, 1);
+    return empty;
 }
 
 static PyObject *run_nested_python(PyObject *self, PyObject *args) {
