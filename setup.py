@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="FlipperNested",
-    version="1.3.1",
+    version="1.3.2",
     author="AloneLiberty",
     description="Recover keys from collected nonces",
     long_description=long_description,

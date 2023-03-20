@@ -194,7 +194,7 @@ char *run_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t nt1, uint32_
         uint64_t key64 = 0;
 
         crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-        snprintf(ch, 14, "%012llx;", key64);
+        snprintf(ch, 14, "%012lx;", key64);
         for (uint32_t j = 0; j < 14; j++) {
             strncat(keys, &ch[j], 1);
         }
@@ -326,7 +326,7 @@ bool nested_calculate(InfoList_t *arg) {
             uint64_t key64 = 0;
 
             crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-            snprintf(ch, 14, "%012llx;", key64);
+            snprintf(ch, 14, "%012lx;", key64);
             for (uint32_t j = 0; j < 14; j++) {
                 strncat(info->keys, &ch[j], 1);
             }
