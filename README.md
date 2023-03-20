@@ -10,7 +10,13 @@ Won't work on Windows, because uses pthreads
 ## Installation
 
 ```bash
-python setup.py install --user
+pip install --upgrade FlipperNested
+```
+
+or, install from sources:
+```bash
+python setup.py sdist bdist_wheel
+pip install --user --no-index --upgrade --find-links=./dist FlipperNested
 ```
 
 ## Usage
