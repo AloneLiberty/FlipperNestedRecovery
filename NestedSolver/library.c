@@ -234,9 +234,9 @@ uint8_t *decode_parity(uint32_t parity) {
 
     for (int j = 3; j >= 0; j--) {
         if (j) {
-            par_array[3 - j] = (parity / pow_calc(10, j)) - 1;
+            par_array[3 - j] = (parity / pow_calc(10, j));
         } else {
-            par_array[3 - j] = parity - 1;
+            par_array[3 - j] = parity;
         }
 
         parity -= (parity / pow_calc(10, j)) * pow_calc(10, j);

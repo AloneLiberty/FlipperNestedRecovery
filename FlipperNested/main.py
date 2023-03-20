@@ -51,7 +51,7 @@ class FlipperNested:
 
                 print('Checking', file['name'])
                 lines = content.splitlines()[1:]
-                if lines.pop(0) != "Version: 1":
+                if lines.pop(0) != "Version: 2":
                     print("Invalid version for", file['name'])
                     print("Consider updating app or recovery script")
                     continue
@@ -79,12 +79,12 @@ class FlipperNested:
 
                 for line in lines:
                     result = re.search(
-                        r'Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 (0x[0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 (0x[0-9a-f]*) sec ([\d]{1,2})',
+                        r'Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})',
                         line.strip())
                     groups = result.groups()
 
                     key_type, sec = groups[0], int(groups[-1])
-                    uid, nt0, ks0, par0, nt1, ks1, par1 = list(map(lambda x: int(x, 16), groups[1:-1]))
+                    uid, nt0, ks0, par0, nt1, ks1, par1 = list(map(lambda x: int(x, 16) if x.startswith("0x") else int(x), groups[1:-1]))
 
                     try:
                         nonce[key_type][sec]
