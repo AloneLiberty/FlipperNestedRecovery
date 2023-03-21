@@ -6,23 +6,15 @@ Q = Queue()
 
 
 def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance, bruteforce_depth):
-    import nested
-    if bruteforce:
-        to_add = 100
-        if bruteforce_depth == 1:
-            to_add = 25
-        elif bruteforce_depth == 2:
-            to_add = 50
-        run = nested.run_full_nested(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance - to_add,
-                                     bruteforce_distance + to_add)
-    else:
-        run = nested.run_nested(uid, nt0, ks0, nt1, ks1)
-    Q.put(run)
+    Q.put(FlipperNested.calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance,
+                                       bruteforce_depth))
 
 
 class FlipperNested:
-    def __init__(self):
-        self.connection = FlipperBridge()
+    def __init__(self, skip_connection=False):
+        self.connection = None
+        if not skip_connection:
+            self.connection = FlipperBridge()
 
     def crack_nonces(self, args=None):
         bruteforce = False
@@ -78,13 +70,7 @@ class FlipperNested:
                     lines.pop()
 
                 for line in lines:
-                    result = re.search(
-                        r'Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})',
-                        line.strip())
-                    groups = result.groups()
-
-                    key_type, sec = groups[0], int(groups[-1])
-                    uid, nt0, ks0, par0, nt1, ks1, par1 = list(map(lambda x: int(x, 16) if x.startswith("0x") else int(x), groups[1:-1]))
+                    uid, nt0, ks0, par0, nt1, ks1, par1, sec, key_type = self.parse_line(line)
 
                     try:
                         nonce[key_type][sec]
@@ -150,3 +136,30 @@ class FlipperNested:
                         print("Lost connection to Flipper!")
                         print("Saved keys to", file['name'].replace('nonces', 'keys'))
                     print(f'Found potential {str(key_count)} keys, use "Check found keys" in app')
+
+    @staticmethod
+    def parse_line(line):
+        result = re.search(
+            r'Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})',
+            line.strip())
+        groups = result.groups()
+
+        key_type, sec = groups[0], int(groups[-1])
+        uid, nt0, ks0, par0, nt1, ks1, par1 = list(
+            map(lambda x: int(x, 16) if x.startswith("0x") else int(x), groups[1:-1]))
+        return uid, nt0, ks0, par0, nt1, ks1, par1, sec, key_type
+
+    @staticmethod
+    def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance, bruteforce_depth):
+        import nested
+        if bruteforce:
+            to_add = 100
+            if bruteforce_depth == 1:
+                to_add = 25
+            elif bruteforce_depth == 2:
+                to_add = 50
+            run = nested.run_full_nested(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance - to_add,
+                                         bruteforce_distance + to_add)
+        else:
+            run = nested.run_nested(uid, nt0, ks0, nt1, ks1)
+        return run
