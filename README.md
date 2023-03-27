@@ -5,7 +5,7 @@ You can collect nonces on Flipper Zero with https://github.com/AloneLiberty/Flip
 
 Flipper Zero should be connected with USB cable and not used by other software (./fbt log, qFlipper)
 
-Won't work on Windows, because uses pthreads
+You should use [MSYS2](https://www.msys2.org/) and install from sources to run on Windows.
 
 ## Installation
 
@@ -15,6 +15,7 @@ pip install --upgrade FlipperNested
 
 or, install from sources:
 ```bash
+pip install pyserial protobuf
 python setup.py sdist bdist_wheel
 pip install --user --no-index --upgrade --find-links=./dist FlipperNested
 ```

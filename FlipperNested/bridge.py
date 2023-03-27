@@ -1,9 +1,10 @@
 import serial
 import serial.tools.list_ports
-import FlipperNested.proto.storage_pb2 as storage_pb2
-import FlipperNested.proto.flipper_pb2 as flipper_pb2
 from google.protobuf.internal.encoder import _VarintBytes
 from google.protobuf.json_format import MessageToDict
+
+import FlipperNested.proto.flipper_pb2 as flipper_pb2
+import FlipperNested.proto.storage_pb2 as storage_pb2
 
 
 class FlipperBridge:
@@ -38,7 +39,8 @@ class FlipperBridge:
         ports = serial.tools.list_ports.comports()
         for port, desc, hwid in ports:
             a = hwid.split()
-            if "VID:PID=0483:5740" in a:
+            if "VID:PID=0483:5740" in a or (
+                    hwid == "n/a" and input("Is {} your Flipper COM port? [y/n] > ".format(port)).lower() == "y"):
                 return port
 
     def _read_varint_32(self) -> int:
