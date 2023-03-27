@@ -4,15 +4,14 @@ import setuptools
 
 nested_solver = Extension('nested',
                           sources=['NestedSolver/library.c', 'NestedSolver/bucketsort.c', 'NestedSolver/crypto1.c',
-                                   'NestedSolver/crapto1.c', 'NestedSolver/library.h', 'NestedSolver/parity.h',
-                                   'NestedSolver/crapto1.h', 'NestedSolver/bucketsort.h', 'NestedSolver/common.h'])
+                                   'NestedSolver/crapto1.c'])
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="FlipperNested",
-    version="1.4.1",
+    version="1.4.2",
     author="AloneLiberty",
     description="Recover keys from collected nonces",
     long_description=long_description,
@@ -31,4 +30,6 @@ setuptools.setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX :: Linux"
     ],
+    headers=['NestedSolver/library.h', 'NestedSolver/parity.h',
+             'NestedSolver/crapto1.h', 'NestedSolver/bucketsort.h', 'NestedSolver/common.h']
 )
