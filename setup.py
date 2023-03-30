@@ -3,15 +3,15 @@ from distutils.core import Extension
 import setuptools
 
 nested_solver = Extension('nested',
-                          sources=['NestedSolver/library.c', 'NestedSolver/bucketsort.c', 'NestedSolver/crypto1.c',
-                                   'NestedSolver/crapto1.c'])
+                          sources=['NestedSolver/python.c', 'NestedSolver/library.c', 'NestedSolver/bucketsort.c',
+                                   'NestedSolver/crypto1.c', 'NestedSolver/crapto1.c'])
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="FlipperNested",
-    version="1.5.0",
+    version="1.5.1",
     author="AloneLiberty",
     description="Recover keys from collected nonces",
     long_description=long_description,
