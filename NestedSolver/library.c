@@ -7,53 +7,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "parity.h"
+#include "inttypes.h"
 #include "Python.h"
-
-uint32_t
-nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys) {
-    union {
-        struct Crypto1State *states;
-        uint64_t *keylist;
-    } unionstate;
-
-    uint32_t i, pos;
-    uint8_t ks3x[8], par[8][8];
-    uint64_t key_recovered;
-
-    // Reset the last three significant bits of the reader nonce
-    nr &= 0xFFFFFF1F;
-
-    for (pos = 0; pos < 8; pos++) {
-        ks3x[7 - pos] = (ks_info >> (pos * 8)) & 0x0F;
-        uint8_t bt = (par_info >> (pos * 8)) & 0xFF;
-
-        par[7 - pos][0] = (bt >> 0) & 1;
-        par[7 - pos][1] = (bt >> 1) & 1;
-        par[7 - pos][2] = (bt >> 2) & 1;
-        par[7 - pos][3] = (bt >> 3) & 1;
-        par[7 - pos][4] = (bt >> 4) & 1;
-        par[7 - pos][5] = (bt >> 5) & 1;
-        par[7 - pos][6] = (bt >> 6) & 1;
-        par[7 - pos][7] = (bt >> 7) & 1;
-    }
-
-    unionstate.states = lfsr_common_prefix(nr, ar, ks3x, par, (par_info == 0));
-
-    if (!unionstate.states) {
-        *keys = NULL;
-        return 0;
-    }
-
-    for (i = 0; unionstate.keylist[i]; i++) {
-        lfsr_rollback_word(unionstate.states + i, uid ^ nt, 0);
-        crypto1_get_lfsr(unionstate.states + i, &key_recovered);
-        unionstate.keylist[i] = key_recovered;
-    }
-    unionstate.keylist[i] = -1;
-
-    *keys = unionstate.keylist;
-    return i;
-}
 
 int compare_uint64(const void *a, const void *b) {
     if (*(uint64_t *) b == *(uint64_t *) a) return 0;
@@ -83,13 +38,6 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB) {
     return p3 - listA;
 }
 
-void num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
-    while (len--) {
-        dest[len] = (uint8_t) n;
-        n >>= 8;
-    }
-}
-
 int Compare16Bits(const void *a, const void *b) {
     if ((*(uint64_t *) b & 0x00ff000000ff0000) == (*(uint64_t *) a & 0x00ff000000ff0000)) return 0;
     if ((*(uint64_t *) b & 0x00ff000000ff0000) > (*(uint64_t *) a & 0x00ff000000ff0000)) return 1;
@@ -112,7 +60,7 @@ typedef struct {
 } StateList_t;
 
 char *run_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t nt1, uint32_t ks1) {
-    char *keys = malloc(sizeof(char *) << 20);
+    char *keys = calloc(256, sizeof(char) * 14);
     struct Crypto1State *p1, *p2, *p3, *p4;
     StateList_t statelists[2];
 
@@ -194,7 +142,7 @@ char *run_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t nt1, uint32_
         uint64_t key64 = 0;
 
         crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-        snprintf(ch, 14, "%012lx;", key64);
+        snprintf(ch, 14, "%012" PRIx64 ";", key64);
         for (uint32_t j = 0; j < 14; j++) {
             strncat(keys, &ch[j], 1);
         }
@@ -326,7 +274,7 @@ bool nested_calculate(InfoList_t *arg) {
             uint64_t key64 = 0;
 
             crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-            snprintf(ch, 14, "%012lx;", key64);
+            snprintf(ch, 14, "%012" PRIx64 ";", key64);
             for (uint32_t j = 0; j < 14; j++) {
                 strncat(info->keys, &ch[j], 1);
             }
