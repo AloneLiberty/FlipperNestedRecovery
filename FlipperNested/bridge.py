@@ -23,7 +23,6 @@ class FlipperBridge:
         if not port:
             raise ConnectionError("Flipper is missing")
         flipper = serial.Serial(port, timeout=1)
-        flipper.baudrate = 230400
         flipper.flushOutput()
         flipper.flushInput()
 
