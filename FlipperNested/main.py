@@ -1,3 +1,4 @@
+import _queue
 import re
 from multiprocessing import Queue, Process
 from FlipperNested.bridge import FlipperBridge
@@ -5,161 +6,185 @@ from FlipperNested.bridge import FlipperBridge
 Q = Queue()
 
 
-def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance, bruteforce_depth):
-    Q.put(FlipperNested.calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance,
-                                       bruteforce_depth))
+def wrapper(*args):
+    Q.put(FlipperNested.calculate_keys(*args))
 
 
 class FlipperNested:
+    VERSION = 2
+    DEPTH_VALUES = {1: 25, 2: 50, 3: 100}
+
     def __init__(self, skip_connection=False):
         self.connection = None
         if not skip_connection:
             self.connection = FlipperBridge()
+        self.filename = None
+        self.nonces = None
+        self.found_keys = None
+        self.bruteforce_distance = [0, 0]
+        self.progress_bar = False
 
-    def crack_nonces(self, args=None):
-        bruteforce = False
-        bruteforce_distance = 0
-        bruteforce_depth = 0
-        uid = 0
-        target_uid = ''
-        save = False
-        if args:
-            target_uid = args.uid
-            save = args.save
+    def run(self, args=None):
+        # if args and args.progress_bar:
+        #     self.progress_bar = True
+        if not args or args and not args.file:
+            self.extract_nonces_from_flipper(args)
+        else:
+            self.extract_nonces_from_file(args.file)
 
+    def parse_file(self, contents):
+        self.nonces = {"A": {}, "B": {}}
+        self.found_keys = {"A": {}, "B": {}}
+        lines = contents.splitlines()[1:]
+        version_string = lines.pop(0)
+        if "Version" not in version_string:
+            print("No version info in", self.filename)
+            return False
+        file_version = int(version_string.split(": ")[1])
+        if file_version != self.VERSION:
+            print("Invalid version for", self.filename)
+            print("You should update " + "app" if file_version < self.VERSION else "recovery script")
+            return False
+        if "Nested: Delay" in contents:
+            print("[Warning] Nested attack with delay was used, will try more PRNG values (will take more time)")
+            result = re.search(r"Nested: Delay [0-9]*, distance ([0-9]*)", contents.strip())
+            print("[Info] Please select depth of check")
+            print("[1] Fast: +-25 values")
+            print("[2] Normal: +-50 values")
+            print("[3] Full: +-100 values [Recommended, ~2Gb RAM usage]")
+            print("[-] Custom [..any other value..]")
+            depth = int(input("[1-3/custom] > "))
+            distance = int(result.groups()[0])
+            if depth < 1:
+                print("Invalid input, using Normal depth")
+                depth = 2
+            if depth < 4:
+                self.bruteforce_distance = [distance - self.DEPTH_VALUES[depth], distance + self.DEPTH_VALUES[depth]]
+            else:
+                self.bruteforce_distance = [distance - depth, distance + depth]
+            lines.pop()
+        for line in lines:
+            values = self.parse_line(line)
+            sec, key_type = values[-2:]
+            if not sec in self.nonces[key_type].keys():
+                self.nonces[key_type][sec] = []
+            self.nonces[key_type][sec].append(values)
+        return len(self.nonces['A']) + len(self.nonces['B']) > 0
+
+    def extract_nonces_from_flipper(self, args=None):
         for file in self.connection.get_files("/ext/nfc/nested"):
-            if file['name'].endswith(".nonces") and target_uid in file['name']:
-                content = self.connection.file_read("/ext/nfc/nested/" + file['name']).decode()
-
-                nonce = {
-                    'A': {},
-                    'B': {},
-                }
-
-                found_keys = {
-                    'A': {},
-                    'B': {},
-                }
-
-                print('Checking', file['name'])
-                lines = content.splitlines()[1:]
-                if lines.pop(0) != "Version: 2":
-                    print("Invalid version for", file['name'])
-                    print("Consider updating app or recovery script")
+            if file["name"].endswith(".nonces"):
+                if args and args.uid:
+                    if file["name"].split(".")[0] != args.uid.upper():
+                        continue
+                self.filename = file["name"]
+                print("Checking", file["name"])
+                contents = self.connection.file_read("/ext/nfc/nested/" + file["name"]).decode()
+                if not self.parse_file(contents):
+                    print("Failed to parse", file["name"])
                     continue
-                if save:
-                    open(file['name'], 'w+').write('\n'.join(lines))
-                    print("Saved nonces to", file['name'])
+                if args and args.save:
+                    open(file["name"], "w+").write(contents)
+                    print("Saved nonces to", file["name"])
+                self.crack_nonces()
+                self.save_keys_to_flipper(args and args.save)
 
-                if "Nested: Delay" in content:
-                    print(
-                        "[Warning] Nested attack with delay was used, will try more PRNG values (will take more time)")
-                    result = re.search(
-                        r'Nested: Delay [0-9]*, distance ([0-9]*)',
-                        content.strip())
-                    bruteforce = True
-                    print("[Info] Please select depth of check")
-                    print("[1] Fast: +-25 values [Not recommended]")
-                    print("[2] Normal: +-50 values")
-                    print("[3] Full: +-100 values [Recommended, ~4Gb RAM usage]")
-                    bruteforce_depth = int(input("[1-3] > "))
-                    if bruteforce_depth < 1 or bruteforce_depth > 3:
-                        print("Invalid input, using Normal depth")
-                        bruteforce_depth = 2
-                    bruteforce_distance = int(result.groups()[0])
-                    lines.pop()
+    def extract_nonces_from_file(self, file):
+        self.filename = file.name
+        if not self.parse_file(file.read()):
+            print("Failed to parse", self.filename)
+            return
+        self.crack_nonces()
+        self.save_keys_to_file()
 
-                for line in lines:
-                    uid, nt0, ks0, par0, nt1, ks1, par1, sec, key_type = self.parse_line(line)
+    def crack_nonces(self):
+        for key_type in self.nonces.keys():
+            for sector in self.nonces[key_type].keys():
+                for info in self.nonces[key_type][sector]:
+                    value = info[:-2]
+                    value.append(self.bruteforce_distance)
+                    print("Calculating for key type", key_type + ", sector", sector)
+                    p = Process(target=wrapper, args=value)
+                    p.start()
 
                     try:
-                        nonce[key_type][sec]
-                    except:
-                        nonce[key_type][sec] = []
-                        found_keys[key_type][sec] = []
+                        p.join()
+                    except KeyboardInterrupt:
+                        print("Stopping...")
+                        p.kill()
+                        return
 
-                    nonce[key_type][sec].append(
-                        '{}:{}:{}:{}:{}:{}'.format(str(ks0), str(ks1), str(nt0), str(nt1), str(par0), str(par1)))
-
-                if not uid:
-                    continue
-
-                for key_type in ['A', 'B']:
-                    for sector in nonce[key_type].keys():
-                        for info in nonce[key_type][sector]:
-                            ks0, ks1, nt0, nt1, par0, par1 = list(
-                                map(lambda x: x, list(map(lambda x: int(x), info.split(":")))))
-                            print("Calculating for key type", key_type + ", sector", sector)
-
-                            p = Process(target=calculate_keys,
-                                        args=(
-                                            uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance,
-                                            bruteforce_depth))
-                            p.start()
-                            p.join()
-                            keys_raw = Q.get()
-                            keys = keys_raw.split(";")
-                            keys.pop()
-
-                            print(f"Found {str(len(keys))} key(s):", keys)
-
-                            if keys:
-                                found_keys[key_type][sector].extend(keys)
-                                break
-                            elif info == nonce[key_type][sector][-1]:
-                                print(
-                                    "Failed to find keys for this sector, try running Nested attack again" + ("or try "
-                                                                                                              "increasing "
-                                                                                                              "depth" if
-                                                                                                              bruteforce_depth != 3 else ""))
-
-                output = ""
-
-                for key_type in ['A', 'B']:
-                    for sector in found_keys[key_type].keys():
-                        for key in found_keys[key_type][sector]:
-                            output += f"Key {key_type} sector {str(sector).zfill(2)}: " + " ".join(
-                                [key.upper()[i:i + 2] for i in range(0, len(key), 2)]) + "\n"
-
-                key_count = output.count("\n")
-                if not key_count:
-                    print("No keys found")
-                else:
-                    if save:
-                        open(file['name'].replace('nonces', 'keys'), 'w+').write(output)
-                        print("Saved keys to", file['name'].replace('nonces', 'keys'))
                     try:
-                        self.connection.file_write("/ext/nfc/nested/" + file['name'].replace('nonces', 'keys'),
-                                                   output.encode())
-                    except:
-                        open(file['name'].replace('nonces', 'keys'), 'w+').write(output)
-                        print("Lost connection to Flipper!")
-                        print("Saved keys to", file['name'].replace('nonces', 'keys'))
-                    print(f'Found potential {str(key_count)} keys, use "Check found keys" in app')
+                        keys = Q.get(timeout=1).split(";")
+                    except _queue.Empty:
+                        print("Something went VERY wrong in key recovery.\nYou MUST report this to developer!")
+                        return
+                    keys.pop()
+
+                    print(f"Found {str(len(keys))} key(s):", keys)
+
+                    if keys:
+                        self.found_keys[key_type][sector] = keys
+                        break
+                    elif value == self.nonces[key_type][sector][-1]:
+                        print("Failed to find keys for this sector, try running Nested attack again")
+
+    def save_keys_to_string(self):
+        output = ""
+        for key_type in self.found_keys.keys():
+            for sector in self.found_keys[key_type].keys():
+                for key in self.found_keys[key_type][sector]:
+                    output += f"Key {key_type} sector {str(sector).zfill(2)}: " + " ".join(
+                        [key.upper()[i:i + 2] for i in range(0, len(key), 2)]) + "\n"
+        return output.strip()
+
+    def save_keys_to_file(self):
+        output = self.save_keys_to_string()
+        if not output:
+            print("No keys found!")
+            return
+        filename = self.filename + ".keys"
+        open(filename, "w+").write(output)
+        print("Saved keys to", filename)
+
+    def save_keys_to_flipper(self, save=False):
+        output = self.save_keys_to_string()
+        if not output:
+            print("No keys found!")
+            return
+        filename = self.filename.replace('nonces', 'keys')
+        if save:
+            open(filename, 'w+').write(output)
+            print("Saved keys to", filename)
+        try:
+            self.connection.file_write("/ext/nfc/nested/" + filename, output.encode())
+        except:
+            if not save:
+                open(filename, 'w+').write(output)
+                print("Lost connection to Flipper!")
+                print("Saved keys to", filename)
 
     @staticmethod
     def parse_line(line):
         result = re.search(
-            r'Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})',
+            r"Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})",
             line.strip())
         groups = result.groups()
 
         key_type, sec = groups[0], int(groups[-1])
-        uid, nt0, ks0, par0, nt1, ks1, par1 = list(
-            map(lambda x: int(x, 16) if x.startswith("0x") else int(x), groups[1:-1]))
-        return uid, nt0, ks0, par0, nt1, ks1, par1, sec, key_type
+        values = list(map(lambda x: int(x, 16) if x.startswith("0x") else int(x), groups[1:-1]))
+        values.append(sec)
+        values.append(key_type)
+        return values
 
     @staticmethod
-    def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce, bruteforce_distance, bruteforce_depth):
+    def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance):
+        import faulthandler
+        faulthandler.enable()
         import nested
-        if bruteforce:
-            to_add = 100
-            if bruteforce_depth == 1:
-                to_add = 25
-            elif bruteforce_depth == 2:
-                to_add = 50
-            run = nested.run_full_nested(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance - to_add,
-                                         bruteforce_distance + to_add)
+        if bruteforce_distance != [0, 0]:
+            run = nested.run_full_nested(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance[0],
+                                         bruteforce_distance[1])
         else:
             run = nested.run_nested(uid, nt0, ks0, nt1, ks1)
         return run

@@ -3,9 +3,7 @@
 Script recovers keys from collected authorization attempts (nonces).
 You can collect nonces on Flipper Zero with https://github.com/AloneLiberty/FlipperNested
 
-Flipper Zero should be connected with USB cable and not used by other software (./fbt log, qFlipper)
-
-You should use [MSYS2](https://www.msys2.org/) and install from sources to run on Windows.
+#### Flipper Zero should be connected with USB cable and not used by ANY other software (./fbt log, qFlipper, lab.flipper.net)
 
 ## Installation
 
@@ -15,9 +13,16 @@ pip install --upgrade FlipperNested
 
 or, install from sources:
 ```bash
-pip install pyserial protobuf
+pip install --upgrade pyserial protobuf wheel setuptools
 python setup.py sdist bdist_wheel
-pip install --user --no-index --upgrade --find-links=./dist FlipperNested
+pip install --user --upgrade --find-links=./dist FlipperNested
+```
+
+or, install on Windows (install and run https://www.msys2.org/):
+```bash
+pacman -Sy python python-pip base-devel gcc
+pip install --upgrade pyserial protobuf wheel setuptools
+pip install --upgrade FlipperNested
 ```
 
 ## Usage
