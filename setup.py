@@ -21,10 +21,8 @@ setuptools.setup(
     install_requires=['protobuf>4', 'pyserial'],
     ext_modules=[nested_solver],
     packages=["FlipperNested", "FlipperNested.proto"],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     classifiers=[
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",

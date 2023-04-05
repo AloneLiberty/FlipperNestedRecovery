@@ -27,7 +27,7 @@ jobs:
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_TEST_SKIP: "*-*linux_{aarch64,ppc64le,s390x}"
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* cp311-* pp39-*"
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* pp39-*"
 
       - uses: actions/upload-artifact@v3
         with:
