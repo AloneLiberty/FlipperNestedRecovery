@@ -1,4 +1,4 @@
 def test_import():
     from FlipperNested.main import FlipperNested
-    flipper = FlipperNested(True)
+    flipper = FlipperNested()
     assert flipper.__class__.__name__ == "FlipperNested"

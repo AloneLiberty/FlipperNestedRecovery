@@ -1,5 +1,5 @@
 from distutils.core import Extension
-
+import platform
 import setuptools
 
 nested_solver = Extension('nested',
@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="FlipperNested",
-    version="1.6.2",
+    version="1.6.3",
     author="AloneLiberty",
     description="Recover keys from collected nonces",
     long_description=long_description,

@@ -1,23 +1,19 @@
 import _queue
 import re
-from multiprocessing import Queue, Process
+from multiprocessing import Manager, Process
 from FlipperNested.bridge import FlipperBridge
 
-Q = Queue()
 
-
-def wrapper(*args):
-    Q.put(FlipperNested.calculate_keys(*args))
+def wrapper(queue, *args):
+    queue.put(FlipperNested.calculate_keys(*args))
 
 
 class FlipperNested:
     VERSION = 2
     DEPTH_VALUES = {1: 25, 2: 50, 3: 100}
 
-    def __init__(self, skip_connection=False):
+    def __init__(self):
         self.connection = None
-        if not skip_connection:
-            self.connection = FlipperBridge()
         self.filename = None
         self.nonces = None
         self.found_keys = None
@@ -28,6 +24,7 @@ class FlipperNested:
         # if args and args.progress_bar:
         #     self.progress_bar = True
         if not args or args and not args.file:
+            self.connection = FlipperBridge()
             self.extract_nonces_from_flipper(args)
         else:
             self.extract_nonces_from_file(args.file)
@@ -101,9 +98,14 @@ class FlipperNested:
         for key_type in self.nonces.keys():
             for sector in self.nonces[key_type].keys():
                 for info in self.nonces[key_type][sector]:
+                    print("Calculating for key type", key_type + ", sector", sector)
+                    m = Manager()
+                    q = m.Queue()
+
                     value = info[:-2]
                     value.append(self.bruteforce_distance)
-                    print("Calculating for key type", key_type + ", sector", sector)
+                    value.insert(0, q)
+
                     p = Process(target=wrapper, args=value)
                     p.start()
 
@@ -115,7 +117,7 @@ class FlipperNested:
                         return
 
                     try:
-                        keys = Q.get(timeout=1).split(";")
+                        keys = q.get(timeout=1).split(";")
                     except _queue.Empty:
                         print("Something went VERY wrong in key recovery.\nYou MUST report this to developer!")
                         return
