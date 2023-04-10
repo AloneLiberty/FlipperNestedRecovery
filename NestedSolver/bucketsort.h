@@ -15,8 +15,8 @@
 //-----------------------------------------------------------------------------
 #ifndef BUCKETSORT_H__
 #define BUCKETSORT_H__
-
-#include "common.h"
+#include <stdio.h>
+#include <stdint.h>
 
 typedef struct bucket {
     uint32_t *head;

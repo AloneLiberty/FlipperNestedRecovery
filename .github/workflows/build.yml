@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macOS-11]
+        os: [ubuntu-20.04, macOS-11, windows-latest]
 
     steps:
       - uses: actions/checkout@v3
@@ -19,14 +19,32 @@ jobs:
         with:
           platforms: all
 
+      - name: Install Microsoft Visual C++ 2010 Redistributable Package
+        if: runner.os == 'Windows'
+        run: |
+          curl -L -o vcredist.exe https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe
+          Start-Process -FilePath vcredist.exe -ArgumentList '/Q' -Wait -PassThru
+
+      - name: Set up pthreads
+        if: runner.os == 'Windows'
+        run: |
+          curl -O http://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.zip
+          7z x -y pthreads-w32-2-9-1-release.zip -opthreads
+          robocopy pthreads\Pre-built.2\dll\x64 build\pthreads /COPYALL /E || true
+          robocopy pthreads\Pre-built.2\include build\pthreads /COPYALL /E || true
+          robocopy pthreads\Pre-built.2\lib\x64 build\pthreads /COPYALL /E || true
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.12.1
         env:
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: "pytest {project}/tests"
           CIBW_TEST_SKIP: "*-*linux_{aarch64,ppc64le,s390x}"
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --add-path build\\pthreads -w {dest_dir} {wheel}"
           CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-*"
 
       - uses: actions/upload-artifact@v3

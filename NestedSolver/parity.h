@@ -20,8 +20,14 @@
 
 #ifndef __PARITY_H
 #define __PARITY_H
+#define _CRT_NONSTDC_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_NON_CONFORMING_SWPRINTFS
 
-#include "common.h"
+#define restrict __restrict
+#define inline __inline
+#include <stdio.h>
+#include <stdint.h>
 
 static const uint8_t g_odd_byte_parity[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -42,10 +48,8 @@ static const uint8_t g_odd_byte_parity[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
 
-//extern const uint8_t OddByteParity[256];
-
-#define ODD_PARITY8(x)   { g_odd_byte_parity[x] }
-#define EVEN_PARITY8(x)  { !g_odd_byte_parity[x] }
+#define ODD_PARITY8(x)   (g_odd_byte_parity[x])
+#define EVEN_PARITY8(x)  (!g_odd_byte_parity[x])
 
 static inline uint8_t oddparity8(const uint8_t x) {
     return g_odd_byte_parity[x];
@@ -58,7 +62,7 @@ static inline uint8_t evenparity8(const uint8_t x) {
 static inline uint8_t evenparity16(uint16_t x) {
 #if !defined __GNUC__
     x ^= x >> 8;
-    return EVEN_PARITY8(x) ;
+    return EVEN_PARITY8(x);
 #else
     return (__builtin_parity(x) & 0xFF);
 #endif
@@ -74,7 +78,13 @@ static inline uint8_t oddparity16(uint16_t x) {
 }
 
 static inline uint8_t evenparity32(uint32_t x) {
-#if !defined __GNUC__
+#if _MSC_VER
+    x ^= x >> 16;
+    x ^= x >> 8;
+    x ^= x >> 4;
+    x &= 0xf;
+    return (0x6996 >> x) & 1;
+#elif !defined __GNUC__
     x ^= x >> 16;
     x ^= x >> 8;
     return EVEN_PARITY8(x);
@@ -84,7 +94,13 @@ static inline uint8_t evenparity32(uint32_t x) {
 }
 
 static inline uint8_t oddparity32(uint32_t x) {
-#if !defined __GNUC__
+#if _MSC_VER
+    x ^= x >> 16;
+    x ^= x >> 8;
+    x ^= x >> 4;
+    x &= 0xf;
+    return ((0x6996 >> x) & 1) ^ 1;
+#elif !defined __GNUC__
     x ^= x >> 16;
     x ^= x >> 8;
     return ODD_PARITY8(x);

@@ -19,6 +19,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+wheelhouse/
 
 # Installer logs
 pip-log.txt
@@ -30,6 +31,7 @@ pip-delete-this-directory.txt
 .cache
 nosetests.xml
 coverage.xml
+.pytest_cache
 
 # Flipper Nested files
 *.nonces

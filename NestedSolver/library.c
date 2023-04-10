@@ -1,7 +1,7 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <inttypes.h>
 #include "library.h"
 #include "crapto1.h"
@@ -22,7 +22,7 @@ static uint32_t intersection(uint64_t *listA, uint64_t *listB) {
     p1 = p3 = listA;
     p2 = listB;
 
-    while (*p1 != UINT64_C(-1) && *p2 != UINT64_C(-1)) {
+    while (*p1 != UINT64_MAX && *p2 != UINT64_MAX) {
         if (compare_uint64(p1, p2) == 0) {
             *p3++ = *p1++;
             p2++;
@@ -31,7 +31,7 @@ static uint32_t intersection(uint64_t *listA, uint64_t *listB) {
             while (compare_uint64(p1, p2) > 0) ++p2;
         }
     }
-    *p3 = UINT64_C(-1);
+    *p3 = UINT64_MAX;
     return p3 - listA;
 }
 
@@ -195,12 +195,16 @@ char *run_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t nt1, uint32_
 char *
 run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_t nt1, uint32_t ks1, uint32_t par1,
                 int from, int to) {
-    pthread_t thread_id[to];
-    uint32_t found_second_array[to];
+    #if _MSC_VER
+        pthread_t thread_id[16384];
+        uint32_t found_second_array[16384];
+    #else
+        pthread_t thread_id[to];
+        uint32_t found_second_array[to];
+    #endif
     uint32_t found_first, found_second;
     bool found = false;
     uint32_t i;
-
     for (int first = from; first < to; first++) {
         i = 0;
         void *status = NULL;

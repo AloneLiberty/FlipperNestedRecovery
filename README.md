@@ -18,13 +18,6 @@ python setup.py sdist bdist_wheel
 pip install --user --upgrade --find-links=./dist FlipperNested
 ```
 
-or, install on Windows (install and run https://www.msys2.org/):
-```bash
-pacman -Sy python python-pip base-devel gcc
-pip install --upgrade pyserial protobuf wheel setuptools
-pip install --upgrade FlipperNested
-```
-
 ## Usage
 
 ```bash

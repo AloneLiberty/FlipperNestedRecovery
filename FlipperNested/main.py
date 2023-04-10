@@ -66,7 +66,7 @@ class FlipperNested:
             if not sec in self.nonces[key_type].keys():
                 self.nonces[key_type][sec] = []
             self.nonces[key_type][sec].append(values)
-        return len(self.nonces['A']) + len(self.nonces['B']) > 0
+        return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
 
     def extract_nonces_from_flipper(self, args=None):
         for file in self.connection.get_files("/ext/nfc/nested"):
@@ -138,6 +138,10 @@ class FlipperNested:
                 for key in self.found_keys[key_type][sector]:
                     output += f"Key {key_type} sector {str(sector).zfill(2)}: " + " ".join(
                         [key.upper()[i:i + 2] for i in range(0, len(key), 2)]) + "\n"
+
+        keys = output.count('Key')
+        if keys:
+            print("Found potential {} keys, use \"Check found keys\" in app".format(keys))
         return output.strip()
 
     def save_keys_to_file(self):
@@ -154,15 +158,15 @@ class FlipperNested:
         if not output:
             print("No keys found!")
             return
-        filename = self.filename.replace('nonces', 'keys')
+        filename = self.filename.replace("nonces", "keys")
         if save:
-            open(filename, 'w+').write(output)
+            open(filename, "w+").write(output)
             print("Saved keys to", filename)
         try:
             self.connection.file_write("/ext/nfc/nested/" + filename, output.encode())
         except:
             if not save:
-                open(filename, 'w+').write(output)
+                open(filename, "w+").write(output)
                 print("Lost connection to Flipper!")
                 print("Saved keys to", filename)
 

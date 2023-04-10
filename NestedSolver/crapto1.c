@@ -21,16 +21,6 @@
 #include <stdlib.h>
 #include "parity.h"
 
-#if !defined LOWMEM && defined __GNUC__
-static uint8_t filterlut[1 << 20];
-static void __attribute__((constructor)) fill_lut(void) {
-    uint32_t i;
-    for (i = 0; i < 1 << 20; ++i)
-        filterlut[i] = filter(i);
-}
-#define filter(x) (filterlut[(x) & 0xfffff])
-#endif
-
 /** update_contribution
  * helper, calculates the partial linear feedback contributions and puts in MSB
  */
