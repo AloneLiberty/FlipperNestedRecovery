@@ -3,7 +3,7 @@
 
 static PyObject *run_nested_python(PyObject *self, PyObject *args) {
     uint64_t uid, nt0, ks0, nt1, ks1;
-    if (!PyArg_ParseTuple(args, "lllll", &uid, &nt0, &ks0, &nt1, &ks1)) {
+    if (!PyArg_ParseTuple(args, "kkkkk", &uid, &nt0, &ks0, &nt1, &ks1)) {
         return NULL;
     }
 
@@ -15,7 +15,7 @@ static PyObject *run_nested_python(PyObject *self, PyObject *args) {
 static PyObject *run_full_nested_python(PyObject *self, PyObject *args) {
     uint64_t uid, nt0, ks0, par0, nt1, ks1, par1;
     int from, to;
-    if (!PyArg_ParseTuple(args, "lllllllii", &uid, &nt0, &ks0, &par0, &nt1, &ks1, &par1, &from, &to)) {
+    if (!PyArg_ParseTuple(args, "kkkkkkkii", &uid, &nt0, &ks0, &par0, &nt1, &ks1, &par1, &from, &to)) {
         return NULL;
     }
 
