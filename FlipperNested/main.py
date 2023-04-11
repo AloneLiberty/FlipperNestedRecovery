@@ -84,7 +84,7 @@ class FlipperNested:
                 if args and args.save:
                     open(file["name"], "w+").write(contents)
                     print("Saved nonces to", file["name"])
-                if self.crack_nonces():
+                if self.recover_keys():
                     break
                 self.save_keys_to_flipper(args and args.save)
 
@@ -93,14 +93,14 @@ class FlipperNested:
         if not self.parse_file(file.read()):
             print("Failed to parse", self.filename)
             return
-        self.crack_nonces()
+        self.recover_keys()
         self.save_keys_to_file()
 
-    def crack_nonces(self):
+    def recover_keys(self):
         for key_type in self.nonces.keys():
             for sector in self.nonces[key_type].keys():
                 for info in self.nonces[key_type][sector]:
-                    print("Calculating for key type", key_type + ", sector", sector)
+                    print("Recovering key type", key_type + ", sector", sector)
                     m = Manager()
                     q = m.Queue()
 
