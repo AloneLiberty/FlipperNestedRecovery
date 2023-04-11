@@ -6,6 +6,7 @@
 #include "library.h"
 #include "crapto1.h"
 #include "parity.h"
+#include "progress.h"
 
 static int compare_uint64(const void *a, const void *b) {
     if (*(uint64_t *) b == *(uint64_t *) a) return 0;
@@ -194,7 +195,7 @@ char *run_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t nt1, uint32_
 
 char *
 run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_t nt1, uint32_t ks1, uint32_t par1,
-                int from, int to) {
+                int from, int to, bool progress) {
     #if _MSC_VER
         pthread_t thread_id[16384];
         uint32_t found_second_array[16384];
@@ -205,7 +206,9 @@ run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_
     uint32_t found_first, found_second;
     bool found = false;
     uint32_t i;
+    if (progress) printf("\n");
     for (int first = from; first < to; first++) {
+        if (progress) print_progress(first - from, to - from);
         i = 0;
         void *status = NULL;
 
@@ -254,9 +257,11 @@ run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_
             found_info->keys = calloc(256, sizeof(char) * 14);
             found_info->free = false;
             nested_calculate(found_info);
+            if (progress) exit_progress();
             return found_info->keys;
         }
     }
 
+    if (progress) exit_progress();
     return calloc(1, 1);
 }

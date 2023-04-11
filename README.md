@@ -27,15 +27,18 @@ Calculating for key type A, sector 0
 Found 1 key(s): ['ffffffffffff']
 ...
 Found potential 32 keys, use "Check found keys" in app
+```
 
+```bash
 $ FlipperNested --help
-usage: FlipperNested [-h] [--uid UID] [--save | --no-save]
+usage: FlipperNested [-h] [--uid UID] [--progress] [--save] [--file FILE]
 
 Calculate keys after Nested attack
 
 options:
-  -h, --help         show this help message and exit
-  --uid UID          Recover only for this UID
-  --save, --no-save  Debug: Save keys/nonces from Flipper (default: False)
-
+  -h, --help   show this help message and exit
+  --uid UID    Recover only for this UID
+  --progress   Show key recovery progress bar
+  --save       Debug: Save nonces/keys from Flipper
+  --file FILE  Debug: Recover keys from local .nonces file
 ```

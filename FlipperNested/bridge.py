@@ -39,7 +39,7 @@ class FlipperBridge:
         for port, desc, hwid in ports:
             a = hwid.split()
             if "VID:PID=0483:5740" in a or (
-                    hwid == "n/a" and input("Is {} your Flipper COM port? [y/n] > ".format(port)).lower() == "y"):
+                    hwid == "n/a" and input("Is {} your Flipper Zero serial port? [y/n] > ".format(port)).lower() == "y"):
                 return port
 
     def _read_varint_32(self) -> int:

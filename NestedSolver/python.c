@@ -14,13 +14,13 @@ static PyObject *run_nested_python(PyObject *self, PyObject *args) {
 
 static PyObject *run_full_nested_python(PyObject *self, PyObject *args) {
     uint64_t uid, nt0, ks0, par0, nt1, ks1, par1;
-    int from, to;
-    if (!PyArg_ParseTuple(args, "kkkkkkkii", &uid, &nt0, &ks0, &par0, &nt1, &ks1, &par1, &from, &to)) {
+    int from, to, progress;
+    if (!PyArg_ParseTuple(args, "kkkkkkkiip", &uid, &nt0, &ks0, &par0, &nt1, &ks1, &par1, &from, &to, &progress)) {
         return NULL;
     }
 
     char *output = run_full_nested((uint32_t) uid, (uint32_t) nt0, (uint32_t) ks0, (uint32_t) par0, (uint32_t) nt1,
-                                   (uint32_t) ks1, (uint32_t) par1, from, to);
+                                   (uint32_t) ks1, (uint32_t) par1, from, to, progress);
 
     return Py_BuildValue("s", output);
 }

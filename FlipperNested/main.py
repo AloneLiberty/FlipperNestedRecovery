@@ -21,8 +21,8 @@ class FlipperNested:
         self.progress_bar = False
 
     def run(self, args=None):
-        # if args and args.progress_bar:
-        #     self.progress_bar = True
+        if args and args.progress:
+            self.progress_bar = True
         if not args or args and not args.file:
             self.connection = FlipperBridge()
             self.extract_nonces_from_flipper(args)
@@ -32,6 +32,7 @@ class FlipperNested:
     def parse_file(self, contents):
         self.nonces = {"A": {}, "B": {}}
         self.found_keys = {"A": {}, "B": {}}
+        self.bruteforce_distance = [0, 0]
         lines = contents.splitlines()[1:]
         version_string = lines.pop(0)
         if "Version" not in version_string:
@@ -83,7 +84,8 @@ class FlipperNested:
                 if args and args.save:
                     open(file["name"], "w+").write(contents)
                     print("Saved nonces to", file["name"])
-                self.crack_nonces()
+                if self.crack_nonces():
+                    break
                 self.save_keys_to_flipper(args and args.save)
 
     def extract_nonces_from_file(self, file):
@@ -104,6 +106,7 @@ class FlipperNested:
 
                     value = info[:-2]
                     value.append(self.bruteforce_distance)
+                    value.append(self.progress_bar)
                     value.insert(0, q)
 
                     p = Process(target=wrapper, args=value)
@@ -114,7 +117,7 @@ class FlipperNested:
                     except KeyboardInterrupt:
                         print("Stopping...")
                         p.kill()
-                        return
+                        return True
 
                     try:
                         keys = q.get(timeout=1).split(";")
@@ -128,7 +131,7 @@ class FlipperNested:
                     if keys:
                         self.found_keys[key_type][sector] = keys
                         break
-                    elif value == self.nonces[key_type][sector][-1]:
+                    elif info == self.nonces[key_type][sector][-1]:
                         print("Failed to find keys for this sector, try running Nested attack again")
 
     def save_keys_to_string(self):
@@ -184,13 +187,13 @@ class FlipperNested:
         return values
 
     @staticmethod
-    def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance):
+    def calculate_keys(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance, progress):
         import faulthandler
         faulthandler.enable()
         import nested
         if bruteforce_distance != [0, 0]:
             run = nested.run_full_nested(uid, nt0, ks0, par0, nt1, ks1, par1, bruteforce_distance[0],
-                                         bruteforce_distance[1])
+                                         bruteforce_distance[1], progress)
         else:
             run = nested.run_nested(uid, nt0, ks0, nt1, ks1)
         return run
