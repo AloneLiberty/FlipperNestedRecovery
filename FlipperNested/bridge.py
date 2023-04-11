@@ -33,14 +33,35 @@ class FlipperBridge:
         self._serial.write(b"start_rpc_session\r")
         self._serial.read_until(b"\n")
 
-    @staticmethod
-    def get_port():
+    def get_port(self):
         ports = serial.tools.list_ports.comports()
+        potential_ports = []
         for port, desc, hwid in ports:
             a = hwid.split()
-            if "VID:PID=0483:5740" in a or (
-                    hwid == "n/a" and input("Is {} your Flipper Zero serial port? [y/n] > ".format(port)).lower() == "y"):
+            if "VID:PID=0483:5740" in a:
                 return port
+            elif hwid == "n/a":
+                potential_ports.append(port)
+        for port in potential_ports:
+            if self.check_port(port):
+                return port
+        if len(potential_ports):
+            print("[Error] Can't guess Flipper Zero serial port. Fallback to manual mode")
+            print("Make sure Flipper Zero is connected and not used by any other software")
+            for port in potential_ports:
+                if input("Is {} your Flipper Zero serial port? [y/n] > ".format(port)).lower() == "y":
+                    return port
+
+    @staticmethod
+    def check_port(port):
+        try:
+            flipper = serial.Serial(port, timeout=1)
+            flipper.flushOutput()
+            flipper.flushInput()
+            if b"Flipper Zero Command Line Interface!" in flipper.read_until(b">: "):
+                return True
+        except:
+            pass
 
     def _read_varint_32(self) -> int:
         MASK = (1 << 32) - 1
@@ -48,9 +69,7 @@ class FlipperBridge:
         result = 0
         shift = 0
         while 1:
-            b = int.from_bytes(
-                self._serial.read(size=1), byteorder="little", signed=False
-            )
+            b = int.from_bytes(self._serial.read(size=1), byteorder="little", signed=False)
             result |= (b & 0x7F) << shift
 
             if not b & 0x80:
@@ -73,10 +92,7 @@ class FlipperBridge:
 
         flipper_message.command_status = flipper_pb2.CommandStatus.Value("OK")
         getattr(flipper_message, cmd_name).CopyFrom(cmd_data)
-        data = bytearray(
-            _VarintBytes(flipper_message.ByteSize())
-            + flipper_message.SerializeToString()
-        )
+        data = bytearray(_VarintBytes(flipper_message.ByteSize()) + flipper_message.SerializeToString())
 
         self._serial.write(data)
 
@@ -102,25 +118,15 @@ class FlipperBridge:
         cmd_data = storage_pb2.ListRequest()
 
         cmd_data.path = path
-        rep_data = self._rpc_send_and_read_answer(
-            cmd_data, "storage_list_request"
-        )
+        rep_data = self._rpc_send_and_read_answer(cmd_data, "storage_list_request")
 
         storage_response.extend(
-            MessageToDict(
-                message=rep_data.storage_list_response,
-                including_default_value_fields=True,
-            )["file"]
-        )
+            MessageToDict(message=rep_data.storage_list_response, including_default_value_fields=True, )["file"])
 
         while rep_data.has_next:
             rep_data = self._rpc_read_answer()
             storage_response.extend(
-                MessageToDict(
-                    message=rep_data.storage_list_response,
-                    including_default_value_fields=True,
-                )["file"]
-            )
+                MessageToDict(message=rep_data.storage_list_response, including_default_value_fields=True, )["file"])
 
         return storage_response
 
@@ -156,19 +162,9 @@ class FlipperBridge:
             cmd_data.file.data = chunk_data
 
             if (chunk + chunk_size) < data_len:
-                self._rpc_send(
-                    cmd_data,
-                    "storage_write_request",
-                    has_next=True,
-                    command_id=command_id,
-                )
+                self._rpc_send(cmd_data, "storage_write_request", has_next=True, command_id=command_id, )
             else:
-                self._rpc_send(
-                    cmd_data,
-                    "storage_write_request",
-                    has_next=False,
-                    command_id=command_id,
-                )
+                self._rpc_send(cmd_data, "storage_write_request", has_next=False, command_id=command_id, )
                 break
 
         self._rpc_read_answer()
