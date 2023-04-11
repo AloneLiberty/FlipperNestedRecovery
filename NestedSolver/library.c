@@ -206,7 +206,7 @@ run_full_nested(uint32_t uid, uint32_t nt0, uint32_t ks0, uint32_t par0, uint32_
     uint32_t found_first, found_second;
     bool found = false;
     uint32_t i;
-    if (progress) printf("\n");
+
     for (int first = from; first < to; first++) {
         if (progress) print_progress(first - from, to - from);
         i = 0;
