@@ -31,7 +31,7 @@ Found potential 32 keys, use "Check found keys" in app
 
 ```bash
 $ FlipperNested --help
-usage: FlipperNested [-h] [--uid UID] [--progress] [--save] [--file FILE]
+usage: FlipperNested [-h] [--uid UID] [--progress] [--save] [--preserve] [--file FILE]
 
 Recover keys after Nested attack
 
@@ -40,5 +40,6 @@ options:
   --uid UID    Recover only for this UID
   --progress   Show key recovery progress bar
   --save       Debug: Save nonces/keys from Flipper
+  --preserve   Debug: Don't remove nonces after recovery
   --file FILE  Debug: Recover keys from local .nonces file
 ```

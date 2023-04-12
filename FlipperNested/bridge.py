@@ -168,3 +168,9 @@ class FlipperBridge:
                 break
 
         self._rpc_read_answer()
+
+    def file_delete(self, path=None):
+        cmd_data = storage_pb2.DeleteRequest()
+        cmd_data.path = path
+
+        self._rpc_send_and_read_answer(cmd_data, "storage_delete_request")

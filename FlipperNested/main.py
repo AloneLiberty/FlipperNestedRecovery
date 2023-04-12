@@ -11,6 +11,7 @@ def wrapper(queue, *args):
 class FlipperNested:
     VERSION = 2
     DEPTH_VALUES = {1: 25, 2: 50, 3: 100}
+    FLIPPER_PATH = "/ext/nfc/nested/"
 
     def __init__(self):
         self.connection = None
@@ -19,13 +20,19 @@ class FlipperNested:
         self.found_keys = None
         self.bruteforce_distance = [0, 0]
         self.progress_bar = False
+        self.save = False
+        self.preserve = False
+        self.uid = ""
 
     def run(self, args=None):
-        if args and args.progress:
-            self.progress_bar = True
+        if args:
+            self.progress_bar = args.progress
+            self.save = args.save
+            self.preserve = args.preserve
+            self.uid = args.uid
         if not args or args and not args.file:
             self.connection = FlipperBridge()
-            self.extract_nonces_from_flipper(args)
+            self.extract_nonces_from_flipper()
         else:
             self.extract_nonces_from_file(args.file)
 
@@ -69,24 +76,24 @@ class FlipperNested:
             self.nonces[key_type][sec].append(values)
         return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
 
-    def extract_nonces_from_flipper(self, args=None):
-        for file in self.connection.get_files("/ext/nfc/nested"):
+    def extract_nonces_from_flipper(self):
+        for file in self.connection.get_files(self.FLIPPER_PATH[:-1]):
             if file["name"].endswith(".nonces"):
-                if args and args.uid:
-                    if file["name"].split(".")[0] != args.uid.upper():
+                if self.uid:
+                    if file["name"].split(".")[0] != self.uid.upper():
                         continue
                 self.filename = file["name"]
                 print("Checking", file["name"])
-                contents = self.connection.file_read("/ext/nfc/nested/" + file["name"]).decode()
+                contents = self.connection.file_read(self.FLIPPER_PATH + file["name"]).decode()
                 if not self.parse_file(contents):
                     print("Failed to parse", file["name"])
                     continue
-                if args and args.save:
+                if self.save:
                     open(file["name"], "w+").write(contents)
                     print("Saved nonces to", file["name"])
                 if self.recover_keys():
                     break
-                self.save_keys_to_flipper(args and args.save)
+                self.save_keys_to_flipper()
 
     def extract_nonces_from_file(self, file):
         self.filename = file.name
@@ -142,7 +149,7 @@ class FlipperNested:
                     output += f"Key {key_type} sector {str(sector).zfill(2)}: " + " ".join(
                         [key.upper()[i:i + 2] for i in range(0, len(key), 2)]) + "\n"
 
-        keys = output.count('Key')
+        keys = output.count("Key")
         if keys:
             print("Found potential {} keys, use \"Check found keys\" in app".format(keys))
         return output.strip()
@@ -156,19 +163,21 @@ class FlipperNested:
         open(filename, "w+").write(output)
         print("Saved keys to", filename)
 
-    def save_keys_to_flipper(self, save=False):
+    def save_keys_to_flipper(self):
         output = self.save_keys_to_string()
         if not output:
             print("No keys found!")
             return
         filename = self.filename.replace("nonces", "keys")
-        if save:
+        if self.save:
             open(filename, "w+").write(output)
             print("Saved keys to", filename)
         try:
-            self.connection.file_write("/ext/nfc/nested/" + filename, output.encode())
+            self.connection.file_write(self.FLIPPER_PATH + filename, output.encode())
+            if not self.preserve:
+                self.connection.file_delete(self.FLIPPER_PATH + self.filename)
         except:
-            if not save:
+            if not self.save:
                 open(filename, "w+").write(output)
                 print("Lost connection to Flipper!")
                 print("Saved keys to", filename)

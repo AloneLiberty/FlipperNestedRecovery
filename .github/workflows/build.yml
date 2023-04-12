@@ -65,7 +65,7 @@ jobs:
           path: dist/*.tar.gz
 
   upload_pypi:
-    name: Upload wheels to PyPi
+    name: Upload wheels to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
