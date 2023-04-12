@@ -23,7 +23,7 @@ pip install --user --upgrade --find-links=./dist FlipperNested
 ```bash
 $ FlipperNested
 Checking 12345678.nonces
-Calculating for key type A, sector 0
+Recovering key type A, sector 0
 Found 1 key(s): ['ffffffffffff']
 ...
 Found potential 32 keys, use "Check found keys" in app
@@ -33,7 +33,7 @@ Found potential 32 keys, use "Check found keys" in app
 $ FlipperNested --help
 usage: FlipperNested [-h] [--uid UID] [--progress] [--save] [--file FILE]
 
-Calculate keys after Nested attack
+Recover keys after Nested attack
 
 options:
   -h, --help   show this help message and exit
