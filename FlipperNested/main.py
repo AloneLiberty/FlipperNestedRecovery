@@ -11,7 +11,8 @@ def wrapper(queue, *args):
 class FlipperNested:
     VERSION = 2
     DEPTH_VALUES = {1: 25, 2: 50, 3: 100}
-    FLIPPER_PATH = "/ext/nfc/nested/"
+    FLIPPER_PATH = "/ext/nfc/.nested/"
+    LEGACY_PATH = "/ext/nfc/nested/"
 
     def __init__(self):
         self.connection = None
@@ -47,13 +48,13 @@ class FlipperNested:
             return False
         file_version = int(version_string.split(": ")[1])
         if file_version != self.VERSION:
-            print("Invalid version for", self.filename)
-            print("You should update " + "app" if file_version < self.VERSION else "recovery script")
+            print("[!!!] Invalid version for", self.filename)
+            print("[!] You should update " + "app" if file_version < self.VERSION else "recovery script")
             return False
         if "Nested: Delay" in contents:
-            print("[Warning] Nested attack with delay was used, will try more PRNG values (will take more time)")
+            print("[!] Nested attack with delay was used, will try more PRNG values (will take more time)")
             result = re.search(r"Nested: Delay [0-9]*, distance ([0-9]*)", contents.strip())
-            print("[Info] Please select depth of check")
+            print("[?] Please select depth of check")
             print("[1] Fast: +-25 values")
             print("[2] Normal: +-50 values")
             print("[3] Full: +-100 values [Recommended, ~2Gb RAM usage]")
@@ -61,7 +62,7 @@ class FlipperNested:
             depth = int(input("[1-3/custom] > "))
             distance = int(result.groups()[0])
             if depth < 1:
-                print("Invalid input, using Normal depth")
+                print("[!] Invalid input, using Normal depth")
                 depth = 2
             if depth < 4:
                 self.bruteforce_distance = [distance - self.DEPTH_VALUES[depth], distance + self.DEPTH_VALUES[depth]]
@@ -77,20 +78,21 @@ class FlipperNested:
         return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
 
     def extract_nonces_from_flipper(self):
+        self.check_legacy_folder()
         for file in self.connection.get_files(self.FLIPPER_PATH[:-1]):
             if file["name"].endswith(".nonces"):
                 if self.uid:
                     if file["name"].split(".")[0] != self.uid.upper():
                         continue
                 self.filename = file["name"]
-                print("Checking", file["name"])
+                print("[?] Checking", file["name"])
                 contents = self.connection.file_read(self.FLIPPER_PATH + file["name"]).decode()
                 if not self.parse_file(contents):
-                    print("Failed to parse", file["name"])
+                    print("[!] Failed to parse", file["name"])
                     continue
                 if self.save:
                     open(file["name"], "w+").write(contents)
-                    print("Saved nonces to", file["name"])
+                    print("[?] Saved nonces to", file["name"])
                 if self.recover_keys():
                     break
                 self.save_keys_to_flipper()
@@ -98,16 +100,27 @@ class FlipperNested:
     def extract_nonces_from_file(self, file):
         self.filename = file.name
         if not self.parse_file(file.read()):
-            print("Failed to parse", self.filename)
+            print("[!] Failed to parse", self.filename)
             return
         self.recover_keys()
         self.save_keys_to_file()
+
+    def check_legacy_folder(self):
+        files = self.connection.get_files(self.LEGACY_PATH[:-1])
+        if len(files):
+            print("[!!!] Found files in legacy folder", self.LEGACY_PATH)
+            self.connection.mkdir(self.FLIPPER_PATH[:-1])
+            for file in files:
+                self.connection.file_rename(self.LEGACY_PATH + file['name'], self.FLIPPER_PATH + file['name'])
+            print("[!] Moved {} files to new directory".format(len(files)))
+            print("[!] You MUST update app to version 1.1.0 or you won't be able to check keys")
+            self.connection.file_delete(self.LEGACY_PATH[:-1])
 
     def recover_keys(self):
         for key_type in self.nonces.keys():
             for sector in self.nonces[key_type].keys():
                 for info in self.nonces[key_type][sector]:
-                    print("Recovering key type", key_type + ", sector", sector)
+                    print("[?] Recovering key type", key_type + ", sector", sector)
                     m = Manager()
                     q = m.Queue()
 
@@ -129,7 +142,7 @@ class FlipperNested:
                     try:
                         keys = q.get(timeout=1).split(";")
                     except _queue.Empty:
-                        print("Something went VERY wrong in key recovery.\nYou MUST report this to developer!")
+                        print("[!!!] Something went VERY wrong in key recovery.\nYou MUST report this to developer!")
                         return
                     keys.pop()
 
@@ -139,7 +152,7 @@ class FlipperNested:
                         self.found_keys[key_type][sector] = keys
                         break
                     elif info == self.nonces[key_type][sector][-1]:
-                        print("Failed to find keys for this sector, try running Nested attack again")
+                        print("[!] Failed to find keys for this sector, try running Nested attack again")
 
     def save_keys_to_string(self):
         output = ""
@@ -151,27 +164,27 @@ class FlipperNested:
 
         keys = output.count("Key")
         if keys:
-            print("Found potential {} keys, use \"Check found keys\" in app".format(keys))
+            print("[+] Found potential {} keys, use \"Check found keys\" in app".format(keys))
         return output.strip()
 
     def save_keys_to_file(self):
         output = self.save_keys_to_string()
         if not output:
-            print("No keys found!")
+            print("[-] No keys found!")
             return
         filename = self.filename + ".keys"
         open(filename, "w+").write(output)
-        print("Saved keys to", filename)
+        print("[?] Saved keys to", filename)
 
     def save_keys_to_flipper(self):
         output = self.save_keys_to_string()
         if not output:
-            print("No keys found!")
+            print("[-] No keys found!")
             return
         filename = self.filename.replace("nonces", "keys")
         if self.save:
             open(filename, "w+").write(output)
-            print("Saved keys to", filename)
+            print("[?] Saved keys to", filename)
         try:
             self.connection.file_write(self.FLIPPER_PATH + filename, output.encode())
             if not self.preserve:
@@ -179,8 +192,8 @@ class FlipperNested:
         except:
             if not self.save:
                 open(filename, "w+").write(output)
-                print("Lost connection to Flipper!")
-                print("Saved keys to", filename)
+                print("[!] Lost connection to Flipper!")
+                print("[?] Saved keys to", filename)
 
     @staticmethod
     def parse_line(line):

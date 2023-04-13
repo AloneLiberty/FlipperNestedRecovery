@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\nPB_Storage\"x\n\x04\x46ile\x12\'\n\x04type\x18\x01 \x01(\x0e\x32\x19.PB_Storage.File.FileType\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\r\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\"\x1d\n\x08\x46ileType\x12\x08\n\x04\x46ILE\x10\x00\x12\x07\n\x03\x44IR\x10\x01\"\x1b\n\x0bInfoRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"7\n\x0cInfoResponse\x12\x13\n\x0btotal_space\x18\x01 \x01(\x04\x12\x12\n\nfree_space\x18\x02 \x01(\x04\"\x1b\n\x0bListRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\".\n\x0cListResponse\x12\x1e\n\x04\x66ile\x18\x01 \x03(\x0b\x32\x10.PB_Storage.File\"\x1b\n\x0bReadRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\".\n\x0cReadResponse\x12\x1e\n\x04\x66ile\x18\x01 \x01(\x0b\x32\x10.PB_Storage.File\"<\n\x0cWriteRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x1e\n\x04\x66ile\x18\x02 \x01(\x0b\x32\x10.PB_Storage.File\"0\n\rDeleteRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x11\n\trecursive\x18\x02 \x01(\x08\x42%\n#com.flipperdevices.protobuf.storageb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\nPB_Storage\"x\n\x04\x46ile\x12\'\n\x04type\x18\x01 \x01(\x0e\x32\x19.PB_Storage.File.FileType\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\r\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\x0c\"\x1d\n\x08\x46ileType\x12\x08\n\x04\x46ILE\x10\x00\x12\x07\n\x03\x44IR\x10\x01\"\x1b\n\x0bInfoRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"7\n\x0cInfoResponse\x12\x13\n\x0btotal_space\x18\x01 \x01(\x04\x12\x12\n\nfree_space\x18\x02 \x01(\x04\"\x1b\n\x0bListRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\".\n\x0cListResponse\x12\x1e\n\x04\x66ile\x18\x01 \x03(\x0b\x32\x10.PB_Storage.File\"\x1b\n\x0bReadRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\".\n\x0cReadResponse\x12\x1e\n\x04\x66ile\x18\x01 \x01(\x0b\x32\x10.PB_Storage.File\"\x1b\n\x0bStatRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\".\n\x0cStatResponse\x12\x1e\n\x04\x66ile\x18\x01 \x01(\x0b\x32\x10.PB_Storage.File\"\x1c\n\x0cMkdirRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"3\n\rRenameRequest\x12\x10\n\x08old_path\x18\x01 \x01(\t\x12\x10\n\x08new_path\x18\x02 \x01(\t\"<\n\x0cWriteRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x1e\n\x04\x66ile\x18\x02 \x01(\x0b\x32\x10.PB_Storage.File\"0\n\rDeleteRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x11\n\trecursive\x18\x02 \x01(\x08\x42%\n#com.flipperdevices.protobuf.storageb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'storage_pb2', globals())
@@ -37,8 +37,16 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _READREQUEST._serialized_end=341
   _READRESPONSE._serialized_start=343
   _READRESPONSE._serialized_end=389
-  _WRITEREQUEST._serialized_start=391
-  _WRITEREQUEST._serialized_end=451
-  _DELETEREQUEST._serialized_start=453
-  _DELETEREQUEST._serialized_end=501
+  _STATREQUEST._serialized_start=391
+  _STATREQUEST._serialized_end=418
+  _STATRESPONSE._serialized_start=420
+  _STATRESPONSE._serialized_end=466
+  _MKDIRREQUEST._serialized_start=468
+  _MKDIRREQUEST._serialized_end=496
+  _RENAMEREQUEST._serialized_start=498
+  _RENAMEREQUEST._serialized_end=549
+  _WRITEREQUEST._serialized_start=551
+  _WRITEREQUEST._serialized_end=611
+  _DELETEREQUEST._serialized_start=613
+  _DELETEREQUEST._serialized_end=661
 # @@protoc_insertion_point(module_scope)

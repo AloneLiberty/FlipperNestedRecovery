@@ -67,6 +67,10 @@ message Main {
         .PB_Storage.ReadResponse storage_read_response = 10;
         .PB_Storage.WriteRequest storage_write_request = 11;
         .PB_Storage.DeleteRequest storage_delete_request = 12;
+        .PB_Storage.MkdirRequest storage_mkdir_request = 13;
+        .PB_Storage.StatRequest storage_stat_request = 24;
+        .PB_Storage.StatResponse storage_stat_response = 25;
+        .PB_Storage.RenameRequest storage_rename_request = 30;
     }
 }
 

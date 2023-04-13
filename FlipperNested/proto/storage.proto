@@ -39,6 +39,23 @@ message ReadResponse {
     File file = 1;
 }
 
+message StatRequest {
+    string path = 1;
+}
+
+message StatResponse {
+    File file = 1;
+}
+
+message MkdirRequest {
+    string path = 1;
+}
+
+message RenameRequest {
+    string old_path = 1;
+    string new_path = 2;
+}
+
 message WriteRequest {
     string path = 1;
     File file = 2;

@@ -172,5 +172,19 @@ class FlipperBridge:
     def file_delete(self, path=None):
         cmd_data = storage_pb2.DeleteRequest()
         cmd_data.path = path
+        cmd_data.recursive = True
 
         self._rpc_send_and_read_answer(cmd_data, "storage_delete_request")
+
+    def mkdir(self, path="/ext"):
+        cmd_data = storage_pb2.MkdirRequest()
+        cmd_data.path = path
+
+        rep_data = self._rpc_send_and_read_answer(cmd_data, "storage_mkdir_request")
+
+    def file_rename(self, old, new):
+        cmd_data = storage_pb2.RenameRequest()
+        cmd_data.old_path = old
+        cmd_data.new_path = new
+
+        self._rpc_send_and_read_answer(cmd_data, "storage_rename_request")
