@@ -49,7 +49,7 @@ class FlipperNested:
         file_version = int(version_string.split(": ")[1])
         if file_version != self.VERSION:
             print("[!!!] Invalid version for", self.filename)
-            print("[!] You should update " + "app" if file_version < self.VERSION else "recovery script")
+            print("[!] You should update " + ("app" if file_version < self.VERSION else "recovery script"))
             return False
         if "Nested: Delay" in contents:
             print("[!] Nested attack with delay was used, will try more PRNG values (will take more time)")
