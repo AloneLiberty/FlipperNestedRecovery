@@ -1,6 +1,8 @@
 import _queue
 import re
+import tempfile
 from multiprocessing import Manager, Process
+
 from FlipperNested.bridge import FlipperBridge
 
 
@@ -8,8 +10,13 @@ def wrapper(queue, *args):
     queue.put(FlipperNested.calculate_keys(*args))
 
 
+def wrapper_hard(queue, *args):
+    queue.put(FlipperNested.calculate_keys_hard(*args))
+
+
 class FlipperNested:
-    VERSION = 2
+    VERSION = 3
+    FILE_TYPES = ["Flipper Nested Nonce Manifest File", "Flipper Nested Nonces File"]
     DEPTH_VALUES = {1: 25, 2: 50, 3: 100}
     FLIPPER_PATH = "/ext/nfc/.nested/"
     LEGACY_PATH = "/ext/nfc/nested/"
@@ -41,41 +48,84 @@ class FlipperNested:
         self.nonces = {"A": {}, "B": {}}
         self.found_keys = {"A": {}, "B": {}}
         self.bruteforce_distance = [0, 0]
-        lines = contents.splitlines()[1:]
+        lines = contents.splitlines()
+        type_string = lines.pop(0)
+        if "Filetype" not in type_string:
+            print("[!] No type in", self.filename)
+            return False
+        file_type = type_string.split(": ")[1]
+        if file_type.strip() not in self.FILE_TYPES:
+            print("[!] Invalid file type in", self.filename)
+            return False
         version_string = lines.pop(0)
         if "Version" not in version_string:
-            print("No version info in", self.filename)
+            print("[!] No version info in", self.filename)
             return False
         file_version = int(version_string.split(": ")[1])
         if file_version != self.VERSION:
             print("[!!!] Invalid version for", self.filename)
             print("[!] You should update " + ("app" if file_version < self.VERSION else "recovery script"))
             return False
-        if "Nested: Delay" in contents:
-            print("[!] Nested attack with delay was used, will try more PRNG values (will take more time)")
-            result = re.search(r"Nested: Delay [0-9]*, distance ([0-9]*)", contents.strip())
-            print("[?] Please select depth of check")
-            print("[1] Fast: +-25 values")
-            print("[2] Normal: +-50 values")
-            print("[3] Full: +-100 values [Recommended, ~2Gb RAM usage]")
-            print("[-] Custom [..any other value..]")
-            depth = int(input("[1-3/custom] > "))
-            distance = int(result.groups()[0])
-            if depth < 1:
-                print("[!] Invalid input, using Normal depth")
-                depth = 2
-            if depth < 4:
-                self.bruteforce_distance = [distance - self.DEPTH_VALUES[depth], distance + self.DEPTH_VALUES[depth]]
+        lines.pop(0)  # remove note
+        if file_type == "Flipper Nested Nonce Manifest File":
+            if "HardNested" in contents:
+                for line in lines:
+                    values = self.parse_line(line)
+                    sec, key_type = values[-2:]
+                    if sec not in self.nonces[key_type].keys():
+                        self.nonces[key_type][sec] = []
+                    file = tempfile.NamedTemporaryFile(delete=False)
+                    value = self.connection.file_read(values[1])
+                    open(file.name, "wb+").write(b"\n".join(value.split(b"\n")[4:]))
+                    if self.save:
+                        open(values[1].rsplit("/", 1)[1], "wb+").write(value)
+                    values[1] = file.name
+                    self.nonces[key_type][sec].append(values)
+                return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
+            elif "Nested: " in contents:
+                if "Nested: Delay" in contents:
+                    print("[!] Nested attack with delay was used, will try more PRNG values (will take more time)")
+                    result = re.search(r"Nested: Delay [0-9]*, distance ([0-9]*)", contents.strip())
+                    print("[?] Please select depth of check")
+                    print("[1] Fast: +-25 values")
+                    print("[2] Normal: +-50 values")
+                    print("[3] Full: +-100 values [Recommended, ~2Gb RAM usage]")
+                    print("[-] Custom [..any other value..]")
+                    depth = int(input("[1-3/custom] > "))
+                    distance = int(result.groups()[0])
+                    if depth < 1:
+                        print("[!] Invalid input, using Normal depth")
+                        depth = 2
+                    if depth < 4:
+                        self.bruteforce_distance = [distance - self.DEPTH_VALUES[depth],
+                                                    distance + self.DEPTH_VALUES[depth]]
+                    else:
+                        self.bruteforce_distance = [distance - depth, distance + depth]
+                    lines.pop()
+                for line in lines:
+                    values = self.parse_line(line)
+                    sec, key_type = values[-2:]
+                    if sec not in self.nonces[key_type].keys():
+                        self.nonces[key_type][sec] = []
+                    self.nonces[key_type][sec].append(values)
+                return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
             else:
-                self.bruteforce_distance = [distance - depth, distance + depth]
-            lines.pop()
-        for line in lines:
-            values = self.parse_line(line)
+                print("[!] No nonces found")
+                return False
+        elif file_type == "Flipper Nested Nonces File":
+            cuid_string = lines.pop(0)
+            if "cuid 0x" not in cuid_string:
+                print("[!] No cuid in", self.filename)
+                return False
+            file = tempfile.NamedTemporaryFile(delete=False)
+            values = self.parse_line(cuid_string)
             sec, key_type = values[-2:]
-            if not sec in self.nonces[key_type].keys():
+            if sec not in self.nonces[key_type].keys():
                 self.nonces[key_type][sec] = []
+            open(file.name, "w+").write("\n".join(lines))
+            values.insert(1, file.name)
             self.nonces[key_type][sec].append(values)
-        return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
+            return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
 
     def extract_nonces_from_flipper(self):
         self.check_legacy_folder()
@@ -111,7 +161,7 @@ class FlipperNested:
             print("[!!!] Found files in legacy folder", self.LEGACY_PATH)
             self.connection.mkdir(self.FLIPPER_PATH[:-1])
             for file in files:
-                self.connection.file_rename(self.LEGACY_PATH + file['name'], self.FLIPPER_PATH + file['name'])
+                self.connection.file_rename(self.LEGACY_PATH + file["name"], self.FLIPPER_PATH + file["name"])
             print("[!] Moved {} files to new directory".format(len(files)))
             print("[!] You MUST update app to version 1.1.0 or you won't be able to check keys")
             self.connection.file_delete(self.LEGACY_PATH[:-1])
@@ -120,16 +170,19 @@ class FlipperNested:
         for key_type in self.nonces.keys():
             for sector in self.nonces[key_type].keys():
                 for info in self.nonces[key_type][sector]:
-                    print("[?] Recovering key type", key_type + ", sector", sector)
+                    print("Recovering key type", key_type + ", sector", sector)
                     m = Manager()
                     q = m.Queue()
-
                     value = info[:-2]
-                    value.append(self.bruteforce_distance)
-                    value.append(self.progress_bar)
                     value.insert(0, q)
 
-                    p = Process(target=wrapper, args=value)
+                    if len(value) == 3:
+                        p = Process(target=wrapper_hard, args=value)
+                    else:
+                        value.append(self.bruteforce_distance)
+                        value.append(self.progress_bar)
+                        p = Process(target=wrapper, args=value)
+
                     p.start()
 
                     try:
@@ -197,13 +250,23 @@ class FlipperNested:
 
     @staticmethod
     def parse_line(line):
-        result = re.search(
-            r"Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})",
-            line.strip())
+        if "HardNested" in line:
+            result = re.search(
+                r"HardNested: Key ([A-B]) cuid (0x[0-9a-f]*) file (\S+) sec (\d{1,2})",
+                line.strip())
+        elif "Nested" in line:
+            result = re.search(
+                r"Nested: Key ([A-B]) cuid (0x[0-9a-f]*) nt0 (0x[0-9a-f]*) ks0 (0x[0-9a-f]*) par0 ([0-9a-f]*) nt1 (0x[0-9a-f]*) ks1 (0x[0-9a-f]*) par1 ([0-9a-f]*) sec (\d{1,2})",
+                line.strip())
+        else:
+            result = re.search(
+                r"Key ([A-B]) cuid (0x[0-9a-f]*) sec (\d{1,2})",
+                line.strip())
         groups = result.groups()
 
         key_type, sec = groups[0], int(groups[-1])
-        values = list(map(lambda x: int(x, 16) if x.startswith("0x") else int(x), groups[1:-1]))
+        values = list(
+            map(lambda x: x if x.startswith("/") else (int(x, 16) if x.startswith("0x") else int(x)), groups[1:-1]))
         values.append(sec)
         values.append(key_type)
         return values
@@ -218,4 +281,12 @@ class FlipperNested:
                                          bruteforce_distance[1], progress)
         else:
             run = nested.run_nested(uid, nt0, ks0, nt1, ks1)
+        return run
+
+    @staticmethod
+    def calculate_keys_hard(uid, filename):
+        import faulthandler
+        faulthandler.enable()
+        import hardnested
+        run = hardnested.run_hardnested(uid, filename)
         return run

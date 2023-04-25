@@ -1,7 +1,7 @@
 # Flipper Nested Recovery script
 
 Script recovers keys from collected authorization attempts (nonces).
-You can collect nonces on Flipper Zero with https://github.com/AloneLiberty/FlipperNested
+You can collect nonces on Flipper Zero with [FlipperNested](https://github.com/AloneLiberty/FlipperNested)
 
 #### Flipper Zero should be connected with USB cable and not used by ANY other software (./fbt log, qFlipper, lab.flipper.net)
 
