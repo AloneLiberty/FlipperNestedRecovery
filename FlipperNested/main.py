@@ -39,7 +39,7 @@ class FlipperNested:
             self.preserve = args.preserve
             self.uid = args.uid
         if not args or args and not args.file:
-            self.connection = FlipperBridge()
+            self.connection = FlipperBridge(args.port)
             self.extract_nonces_from_flipper()
         else:
             self.extract_nonces_from_file(args.file)

@@ -8,7 +8,8 @@ import FlipperNested.proto.storage_pb2 as storage_pb2
 
 
 class FlipperBridge:
-    def __init__(self):
+    def __init__(self, port: str = None):
+        self.port = port
         self.device_info = None
         self._serial = None
         self.command_id = 0
@@ -19,10 +20,11 @@ class FlipperBridge:
         self.start_rpc_session()
 
     def open_port(self):
-        port = self.get_port()
-        if not port:
+        if not self.port:
+            self.port = self.get_port()
+        if not self.port:
             raise ConnectionError("Flipper is missing")
-        flipper = serial.Serial(port, timeout=1)
+        flipper = serial.Serial(self.port, timeout=1)
         flipper.flushOutput()
         flipper.flushInput()
 

@@ -22,11 +22,11 @@ pip install --user --upgrade --find-links=./dist FlipperNested
 
 ```bash
 $ FlipperNested
-Checking 12345678.nonces
+[?] Checking 12345678.nonces
 Recovering key type A, sector 0
 Found 1 key(s): ['ffffffffffff']
 ...
-Found potential 32 keys, use "Check found keys" in app
+[+] Found potential 32 keys, use "Check found keys" in app
 ```
 
 ```bash
@@ -38,6 +38,7 @@ Recover keys after Nested attack
 options:
   -h, --help   show this help message and exit
   --uid UID    Recover only for this UID
+  --port PORT  Port to connect
   --progress   Show key recovery progress bar
   --save       Debug: Save nonces/keys from Flipper
   --preserve   Debug: Don't remove nonces after recovery
