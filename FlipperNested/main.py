@@ -1,4 +1,5 @@
 import _queue
+import os.path
 import re
 import tempfile
 from multiprocessing import Manager, Process
@@ -75,10 +76,28 @@ class FlipperNested:
                     if sec not in self.nonces[key_type].keys():
                         self.nonces[key_type][sec] = []
                     file = tempfile.NamedTemporaryFile(delete=False)
-                    value = self.connection.file_read(values[1])
+                    nonces_filename = values[1].rsplit("/", 1)[1]
+                    if self.connection:
+                        value = self.connection.file_read(values[1])
+                    elif os.path.isfile(os.path.dirname(self.filename) + "/" + nonces_filename):
+                        # file in same folder as input file
+                        value = open(os.path.dirname(self.filename) + "/" + nonces_filename, "rb").read()
+                    elif os.path.isfile(os.path.dirname(self.filename) + "/" + self.filename.rsplit(".", 1)[1] + "/" +
+                                        nonces_filename):
+                        # copied from .nested folder with UID
+                        value = open(os.path.dirname(self.filename) + "/" + self.filename.rsplit(".", 1)[1] + "/" +
+                                     nonces_filename, "rb").read()
+                    elif os.path.isfile(nonces_filename):
+                        # file in current directory (--save)
+                        value = open(nonces_filename, "rb").read()
+                    else:
+                        print(
+                            "[!] Missing {} file and Flipper Zero isn't connected".format(nonces_filename))
+                        print("[?] If you are trying to recover from Hard Nested offline, you should copy this file")
+                        return False
                     open(file.name, "wb+").write(b"\n".join(value.split(b"\n")[4:]))
                     if self.save:
-                        open(values[1].rsplit("/", 1)[1], "wb+").write(value)
+                        open(nonces_filename, "wb+").write(value)
                     values[1] = file.name
                     self.nonces[key_type][sec].append(values)
                 return len(self.nonces["A"]) + len(self.nonces["B"]) > 0
