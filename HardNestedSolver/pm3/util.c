@@ -44,12 +44,3 @@ int num_CPUs(void) {
     return count;
 #endif
 }
-
-inline uint64_t bitcount64(uint64_t a) {
-#if defined __GNUC__
-    return __builtin_popcountll(a);
-#else
-    PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
-    return 0;
-#endif
-}
