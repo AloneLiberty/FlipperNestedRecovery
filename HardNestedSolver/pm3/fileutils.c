@@ -147,8 +147,7 @@ char *getExecutablePath(char *buffer, size_t size) {
 #ifdef _MSC_VER
 #include <direct.h>
 #define getcwd(buffer, size) GetCurrentDirectoryA(size, buffer)
-#endif
-#ifdef __APPLE__
+#else
 #include <unistd.h>
 #endif
 #endif
