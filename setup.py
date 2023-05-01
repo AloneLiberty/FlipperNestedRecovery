@@ -26,13 +26,14 @@ hardnested_solver = Extension("hardnested", sources=["HardNestedSolver/pm3/ui.c"
                                                      "HardNestedSolver/hardnested/hardnested_bruteforce.c",
                                                      "HardNestedSolver/hardnested/hardnested_bitarray_core.c",
                                                      "HardNestedSolver/hardnested/tables.c",
+                                                     "HardNestedSolver/pm3/util_posix.c",
                                                      "HardNestedSolver/python.c"], include_dirs=include_dirs,
                               library_dirs=include_dirs, extra_compile_args=extra_compile_args, libraries=libraries)
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(name="FlipperNested", version="2.2.0", author="AloneLiberty",
+setuptools.setup(name="FlipperNested", version="2.2.1", author="AloneLiberty",
                  description="Recover keys from collected nonces", long_description=long_description,
                  long_description_content_type="text/markdown",
                  url="https://github.com/AloneLiberty/FlipperNestedRecovery",
