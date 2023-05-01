@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "pm3_cmd.h"    // Packet structs
 #include "util.h"       // FILE_PATH_SIZE
 
 #ifdef _WIN32
@@ -32,44 +31,6 @@
 #define ABOVE "../"
 #define PATHSEP "/"
 #endif
-
-// PM3 share path relative to executable when installed
-#define PM3_SHARE_RELPATH    ".." PATHSEP "share" PATHSEP "proxmark3" PATHSEP
-
-// PM3_USER_DIRECTORY will be expanded from $HOME, e.g. ~/.proxmark3/
-#define PM3_USER_DIRECTORY   PATHSEP ".proxmark3" PATHSEP
-
-// PM3 subdirectories:
-#define PYTHON_SCRIPTS_SUBDIR "pyscripts" PATHSEP
-#define CMD_SCRIPTS_SUBDIR   "cmdscripts" PATHSEP
-#define DICTIONARIES_SUBDIR  "dictionaries" PATHSEP
-#define LUA_LIBRARIES_SUBDIR "lualibs" PATHSEP
-#define LUA_SCRIPTS_SUBDIR   "luascripts" PATHSEP
-#define RESOURCES_SUBDIR     "resources" PATHSEP
-#define TRACES_SUBDIR        "traces" PATHSEP
-#define LOGS_SUBDIR          "logs" PATHSEP
-#define FIRMWARES_SUBDIR     "firmware" PATHSEP
-#define BOOTROM_SUBDIR       "bootrom" PATHSEP "obj" PATHSEP
-#define FULLIMAGE_SUBDIR     "armsrc" PATHSEP "obj" PATHSEP
-
-#define PACKED __attribute__((packed))
-
-#define VERSION_INFORMATION_MAGIC 0x56334d50 // "PM3V"
-
-// debug
-#define DBG_NONE          0 // no messages
-#define DBG_ERROR         1 // errors only
-#define DBG_INFO          2 // errors + info messages
-#define DBG_DEBUG         3 // errors + info + debug messages
-#define DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
-extern int g_dbglevel;
-
-// tear-off
-extern uint16_t g_tearoff_delay_us;
-extern bool g_tearoff_enabled;
-
-// reader voltage field detector
-#define MF_MINFIELDV      4000
 
 #ifndef MIN
 # define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -82,10 +43,6 @@ extern bool g_tearoff_enabled;
 #ifndef ABS
 # define ABS(a) ( ((a)<0) ? -(a) : (a) )
 #endif
-
-
-//#define RAMFUNC __attribute((long_call, section(".ramfunc")))
-#define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm")))
 
 #ifndef ROTR
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
@@ -173,25 +130,4 @@ extern bool g_tearoff_enabled;
 #ifndef SWAP_NIBBLE
 # define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
 #endif
-
-// Binary Encoded Digit
-#ifndef BCD2DEC
-# define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
-#endif
-
-#ifndef DEC2BCD
-# define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
-#endif
-
-// bit stream operations
-#define TEST_BIT(data, i) (*(data + (i / 8)) >> (7 - (i % 8))) & 1
-#define SET_BIT(data, i)   *(data + (i / 8)) |= (1 << (7 - (i % 8)))
-#define CLEAR_BIT(data, i) *(data + (i / 8)) &= ~(1 << (7 - (i % 8)))
-#define FLIP_BIT(data, i)  *(data + (i / 8)) ^= (1 << (7 - (i % 8)))
-
-typedef struct {
-    uint64_t Key[2];
-    uint8_t foundKey[2];
-} sector_t;
-
 #endif

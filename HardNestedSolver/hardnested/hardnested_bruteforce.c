@@ -56,17 +56,12 @@ THE SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 
-//#include "../pm3/common.h"
-//#include "../cmdhfmfhard.h"
 #include "hardnested_bf_core.h"
 #include "../pm3/ui.h"
-//#include "../pm3/util.h"
 #include "../pm3/util_posix.h"
 #include "../crapto1.h"
 #include "../parity.h"
 #include "../cmdhfmfhard.h"
-//#include "../pm3/fileutils.h"
-//#include "../pm3/pm3_cmd.h"
 #include "hardnested_benchmark_data.h"
 
 #define NUM_BRUTE_FORCE_THREADS         (num_CPUs())
@@ -77,8 +72,7 @@ THE SOFTWARE.
 #endif
 #define DEFAULT_BRUTE_FORCE_RATE        (120000000.0) // if benchmark doesn't succeed
 #define TEST_BENCH_SIZE                 (6000)        // number of odd and even states for brute force benchmark
-#define TEST_BENCH_FILENAME             "hardnested_bf_bench_data.bin"
-//#define WRITE_BENCH_FILE
+
 #ifdef _MSC_VER
     #include <Windows.h>
 	#include <share.h>
@@ -308,37 +302,6 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
         bf_test_nonce_2nd_byte[j] = bf_test_nonce_2nd_byte_temp[j];
     }
 }
-
-
-#if defined (WRITE_BENCH_FILE)
-static void write_benchfile(statelist_t *candidates) {
-
-    PrintAndLogEx(NORMAL, "Writing brute force benchmark data in " RESOURCES_SUBDIR " subdirectory...");
-    FILE *benchfile = fopen(RESOURCES_SUBDIR TEST_BENCH_FILENAME, "wb");
-    if (benchfile == NULL) {
-        PrintAndLogEx(ERR, "Can't write " RESOURCES_SUBDIR TEST_BENCH_FILENAME", abort!");
-        return;
-    }
-    fwrite(&nonces_to_bruteforce, 1, sizeof(nonces_to_bruteforce), benchfile);
-    for (uint32_t i = 0; i < nonces_to_bruteforce; i++) {
-        fwrite(&(bf_test_nonce[i]), 1, sizeof(bf_test_nonce[i]), benchfile);
-        fwrite(&(bf_test_nonce_par[i]), 1, sizeof(bf_test_nonce_par[i]), benchfile);
-    }
-    uint32_t num_states = MIN(candidates->len[EVEN_STATE], TEST_BENCH_SIZE);
-    fwrite(&num_states, 1, sizeof(num_states), benchfile);
-    for (uint32_t i = 0; i < num_states; i++) {
-        fwrite(&(candidates->states[EVEN_STATE][i]), 1, sizeof(uint32_t), benchfile);
-    }
-    num_states = MIN(candidates->len[ODD_STATE], TEST_BENCH_SIZE);
-    fwrite(&num_states, 1, sizeof(num_states), benchfile);
-    for (uint32_t i = 0; i < num_states; i++) {
-        fwrite(&(candidates->states[ODD_STATE][i]), 1, sizeof(uint32_t), benchfile);
-    }
-    fclose(benchfile);
-    PrintAndLogEx(NORMAL, "Done");
-}
-#endif
-
 
 bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *found_key) {
 #if defined (WRITE_BENCH_FILE)

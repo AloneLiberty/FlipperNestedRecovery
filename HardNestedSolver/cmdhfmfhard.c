@@ -38,7 +38,6 @@
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "pm3/ui.h"
-#include "pm3/fileutils.h"
 #include "pm3/commonutil.h"
 #include "pm3/util_posix.h"
 #include "hardnested/tables.h"
@@ -984,71 +983,6 @@ static void estimate_sum_a8(void) {
     }
 }
 
-static int read_nonce_file(char *filename) {
-
-    if (filename == NULL) {
-        PrintAndLogEx(WARNING, "Filename is NULL");
-        return PM3_EINVARG;
-    }
-    FILE *fnonces = NULL;
-    char progress_text[80] = "";
-    uint8_t read_buf[9];
-
-    num_acquired_nonces = 0;
-    if ((fnonces = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not open file "
-                               _YELLOW_("%s"), filename);
-        return PM3_EFILE;
-    }
-
-    snprintf(progress_text, 80, "Reading nonces from file "
-                                _YELLOW_("%s"), filename);
-    hardnested_print_progress(0, progress_text, (float) (1LL << 47), 0);
-    size_t bytes_read = fread(read_buf, 1, 6, fnonces);
-    if (bytes_read != 6) {
-        PrintAndLogEx(ERR, "File reading error.");
-        fclose(fnonces);
-        return PM3_EFILE;
-    }
-    cuid = bytes_to_num(read_buf, 4);
-    uint8_t trgBlockNo = bytes_to_num(read_buf + 4, 1);
-    uint8_t trgKeyType = bytes_to_num(read_buf + 5, 1);
-
-    bytes_read = fread(read_buf, 1, 9, fnonces);
-    while (bytes_read == 9) {
-        uint32_t nt_enc1 = bytes_to_num(read_buf, 4);
-        uint32_t nt_enc2 = bytes_to_num(read_buf + 4, 4);
-        uint8_t par_enc = bytes_to_num(read_buf + 8, 1);
-        add_nonce(nt_enc1, par_enc >> 4);
-        add_nonce(nt_enc2, par_enc & 0x0f);
-        num_acquired_nonces += 2;
-        bytes_read = fread(read_buf, 1, 9, fnonces);
-    }
-    fclose(fnonces);
-
-    char progress_string[80];
-    snprintf(progress_string, sizeof(progress_string), "Read %u nonces from file. cuid = %08x", num_acquired_nonces,
-             cuid);
-    hardnested_print_progress(num_acquired_nonces, progress_string, (float) (1LL << 47), 0);
-    snprintf(progress_string, sizeof(progress_string), "Target Block=%d, Keytype=%c", trgBlockNo,
-             trgKeyType == 0 ? 'A' : 'B');
-    hardnested_print_progress(num_acquired_nonces, progress_string, (float) (1LL << 47), 0);
-
-    bool got_match = false;
-    for (uint8_t i = 0; i < NUM_SUMS; i++) {
-        if (first_byte_Sum == sums[i]) {
-            first_byte_Sum = i;
-            got_match = true;
-            break;
-        }
-    }
-    if (got_match == false) {
-        PrintAndLogEx(FAILED, "No match for the First_Byte_Sum (%u), is the card a genuine MFC Ev1? ", first_byte_Sum);
-        return PM3_ESOFT;
-    }
-    return 0;
-}
-
 static noncelistentry_t *SearchFor2ndByte(uint8_t b1, uint8_t b2) {
     noncelistentry_t *p = nonces[b1].first;
     while (p != NULL) {
@@ -1262,6 +1196,7 @@ static int simulate_acquire_nonces(uint32_t uid, char* path) {
             num_acquired_nonces += add_nonce(nt_enc, par_enc);
             total_num_nonces++;
         }
+
         if (num_acquired_nonces % 256 == 0) {
             hardnested_print_progress(num_acquired_nonces, "Loading nonces from file", brute_force_depth, 0);
         }
@@ -1283,7 +1218,7 @@ static int simulate_acquire_nonces(uint32_t uid, char* path) {
                 if (got_match == false) {
                     PrintAndLogEx(FAILED, "No match for the First_Byte_Sum (%u), is the card a genuine MFC Ev1? ",
                                   first_byte_Sum);
-                    return PM3_ESOFT;
+                    return -1;
                 }
 
                 hardnested_stage |= CHECK_2ND_BYTES;
