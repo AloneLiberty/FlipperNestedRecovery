@@ -1174,6 +1174,7 @@ static int simulate_acquire_nonces(uint32_t uid, char* path) {
     uint32_t total_num_nonces = 0;
     float brute_force_depth;
     bool reported_suma8 = false;
+    bool got_invalid = false;
 
     cuid = uid;
 
@@ -1238,6 +1239,29 @@ static int simulate_acquire_nonces(uint32_t uid, char* path) {
         } else {
             update_nonce_data(true);
             acquisition_completed = shrink_key_space(&brute_force_depth);
+            if (brute_force_depth == 0) {
+                // something went wrong, wipe nonce memory and skip this nonce
+                if (got_invalid) {
+                    hardnested_print_progress(num_acquired_nonces, "Too many invalid nonces", brute_force_depth, 0);
+                    return -1;
+                }
+                hardnested_print_progress(num_acquired_nonces, "Found invalid nonce! Trying without it...", brute_force_depth, 0);
+                got_invalid = true;
+                fclose(fp);
+                fp = fopen(path, "r");
+                init_nonce_memory();
+                uint32_t to = total_num_nonces - 1;
+                num_acquired_nonces = 0;
+                total_num_nonces = 0;
+                for (uint32_t i = 0; i < to; i++) {
+                    if (fgets(line, sizeof(line), fp) != NULL) {
+                        sscanf(line, "%u|%hhu", &nt_enc, &par_enc);
+                        num_acquired_nonces += add_nonce(nt_enc, par_enc);
+                        total_num_nonces++;
+                    }
+                }
+                fgets(line, sizeof(line), fp); // skip line
+            }
         }
     } while (!acquisition_completed);
 
@@ -1835,7 +1859,7 @@ static void init_it_all(void) {
 
 int
 mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey,
-             bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey, char *filename, uint32_t uid, char* path) {
+             bool nonce_file_read, bool nonce_file_write, bool slow, uint64_t *foundkey, char *filename, uint32_t uid, char* path) {
     char progress_text[80];
     char instr_set[12] = {0};
 
@@ -1847,106 +1871,99 @@ mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
     srand((unsigned) time(NULL));
     brute_force_per_second = brute_force_benchmark();
-    write_stats = false;
+    // set the correct locale for the stats printing
+    write_stats = true;
+    setlocale(LC_NUMERIC, "");
 
-    if (tests) {
-        // set the correct locale for the stats printing
-        write_stats = true;
-        setlocale(LC_NUMERIC, "");
+    start_time = msclock();
+    print_progress_header();
+    snprintf(progress_text, sizeof(progress_text), "Brute force benchmark: %1.0f million (2^%1.1f) keys/s",
+             brute_force_per_second / 1000000, log(brute_force_per_second) / log(2.0));
+    hardnested_print_progress(0, progress_text, (float) (1LL << 47), 0);
 
-        for (uint32_t i = 0; i < tests; i++) {
-            start_time = msclock();
-            print_progress_header();
-            snprintf(progress_text, sizeof(progress_text), "Brute force benchmark: %1.0f million (2^%1.1f) keys/s",
-                     brute_force_per_second / 1000000, log(brute_force_per_second) / log(2.0));
-            hardnested_print_progress(0, progress_text, (float) (1LL << 47), 0);
-            snprintf(progress_text, sizeof(progress_text), "Starting Test #%" PRIu32 " ...", i + 1);
-            hardnested_print_progress(0, progress_text, (float) (1LL << 47), 0);
+    if (trgkey != NULL) {
+        known_target_key = bytes_to_num(trgkey, 6);
+    } else {
+        known_target_key = -1;
+    }
 
-            if (trgkey != NULL) {
-                known_target_key = bytes_to_num(trgkey, 6);
-            } else {
-                known_target_key = -1;
+    init_bitflip_bitarrays();
+    init_part_sum_bitarrays();
+    init_sum_bitarrays();
+    init_allbitflips_array();
+    init_nonce_memory();
+    update_reduction_rate(0.0, true);
+
+    int res = simulate_acquire_nonces(uid, path);
+    if (res != 0) {
+        return -1;
+    }
+
+    set_test_state(best_first_bytes[0]);
+
+    free_bitflip_bitarrays();
+
+    bool key_found = false;
+    num_keys_tested = 0;
+    uint32_t num_odd = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[ODD_STATE];
+    uint32_t num_even = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[EVEN_STATE];
+    float expected_brute_force1 = (float) num_odd * num_even / 2.0;
+    float expected_brute_force2 = nonces[best_first_bytes[0]].expected_num_brute_force;
+
+    if (expected_brute_force1 < expected_brute_force2) {
+        hardnested_print_progress(num_acquired_nonces, "(Ignoring Sum(a8) properties)", expected_brute_force1,
+                                  0);
+        set_test_state(best_first_byte_smallest_bitarray);
+        add_bitflip_candidates(best_first_byte_smallest_bitarray);
+        maximum_states = 0;
+        for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
+            maximum_states += (uint64_t) sl->len[ODD_STATE] * sl->len[EVEN_STATE];
+        }
+
+        best_first_bytes[0] = best_first_byte_smallest_bitarray;
+        pre_XOR_nonces();
+        prepare_bf_test_nonces(nonces, best_first_bytes[0]);
+
+        key_found = brute_force(foundkey);
+        free(candidates->states[ODD_STATE]);
+        free(candidates->states[EVEN_STATE]);
+        free_candidates_memory(candidates);
+        candidates = NULL;
+    } else {
+        pre_XOR_nonces();
+        prepare_bf_test_nonces(nonces, best_first_bytes[0]);
+        for (uint8_t j = 0; j < NUM_SUMS && !key_found; j++) {
+            float expected_brute_force = nonces[best_first_bytes[0]].expected_num_brute_force;
+            snprintf(progress_text, sizeof(progress_text), "(%d. guess: Sum(a8) = %" PRIu16 ")", j + 1,
+                     sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx]);
+            hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
+            if (sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx] != real_sum_a8) {
+                snprintf(progress_text, sizeof(progress_text),
+                         "(Estimated Sum(a8) is WRONG! Correct Sum(a8) = %" PRIu16 ")", real_sum_a8);
+                hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
             }
+            generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx);
 
-            init_bitflip_bitarrays();
-            init_part_sum_bitarrays();
-            init_sum_bitarrays();
-            init_allbitflips_array();
-            init_nonce_memory();
-            update_reduction_rate(0.0, true);
-
-            int res = simulate_acquire_nonces(uid, path);
-            if (res != 0) {
-                return res;
+            key_found = brute_force(foundkey);
+            free_statelist_cache();
+            free_candidates_memory(candidates);
+            candidates = NULL;
+            if (key_found == false) {
+                // update the statistics
+                nonces[best_first_bytes[0]].sum_a8_guess[j].prob = 0;
+                nonces[best_first_bytes[0]].sum_a8_guess[j].num_states = 0;
+                // and calculate new expected number of brute forces
+                update_expected_brute_force(best_first_bytes[0]);
             }
-
-            set_test_state(best_first_bytes[0]);
-
-            free_bitflip_bitarrays();
-
-            bool key_found = false;
-            num_keys_tested = 0;
-            uint32_t num_odd = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[ODD_STATE];
-            uint32_t num_even = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[EVEN_STATE];
-            float expected_brute_force1 = (float) num_odd * num_even / 2.0;
-            float expected_brute_force2 = nonces[best_first_bytes[0]].expected_num_brute_force;
-
-            if (expected_brute_force1 < expected_brute_force2) {
-                hardnested_print_progress(num_acquired_nonces, "(Ignoring Sum(a8) properties)", expected_brute_force1,
-                                          0);
-                set_test_state(best_first_byte_smallest_bitarray);
-                add_bitflip_candidates(best_first_byte_smallest_bitarray);
-                maximum_states = 0;
-                for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
-                    maximum_states += (uint64_t) sl->len[ODD_STATE] * sl->len[EVEN_STATE];
-                }
-
-                best_first_bytes[0] = best_first_byte_smallest_bitarray;
-                pre_XOR_nonces();
-                prepare_bf_test_nonces(nonces, best_first_bytes[0]);
-
-                key_found = brute_force(foundkey);
-                free(candidates->states[ODD_STATE]);
-                free(candidates->states[EVEN_STATE]);
-                free_candidates_memory(candidates);
-                candidates = NULL;
-            } else {
-                pre_XOR_nonces();
-                prepare_bf_test_nonces(nonces, best_first_bytes[0]);
-                for (uint8_t j = 0; j < NUM_SUMS && !key_found; j++) {
-                    float expected_brute_force = nonces[best_first_bytes[0]].expected_num_brute_force;
-                    snprintf(progress_text, sizeof(progress_text), "(%d. guess: Sum(a8) = %" PRIu16 ")", j + 1,
-                             sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx]);
-                    hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
-                    if (sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx] != real_sum_a8) {
-                        snprintf(progress_text, sizeof(progress_text),
-                                 "(Estimated Sum(a8) is WRONG! Correct Sum(a8) = %" PRIu16 ")", real_sum_a8);
-                        hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
-                    }
-                    generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx);
-
-                    key_found = brute_force(foundkey);
-                    free_statelist_cache();
-                    free_candidates_memory(candidates);
-                    candidates = NULL;
-                    if (key_found == false) {
-                        // update the statistics
-                        nonces[best_first_bytes[0]].sum_a8_guess[j].prob = 0;
-                        nonces[best_first_bytes[0]].sum_a8_guess[j].num_states = 0;
-                        // and calculate new expected number of brute forces
-                        update_expected_brute_force(best_first_bytes[0]);
-                    }
-                }
-            }
-
-            free_nonces_memory();
-            free_bitarray(all_bitflips_bitarray[ODD_STATE]);
-            free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
-            free_sum_bitarrays();
-            free_part_sum_bitarrays();
         }
     }
-	
-    return 0;
+
+    free_nonces_memory();
+    free_bitarray(all_bitflips_bitarray[ODD_STATE]);
+    free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
+    free_sum_bitarrays();
+    free_part_sum_bitarrays();
+
+    return key_found;
 }
+ 

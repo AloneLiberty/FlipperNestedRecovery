@@ -5,7 +5,7 @@
 
 char* run_hardnested(uint32_t uid, char* path) {
     uint64_t foundkey = 0;
-    if (mfnestedhard(0, 0, NULL, 0, 0, NULL, false, false, false, 1, &foundkey, NULL, uid, path) == 0) {
+    if (mfnestedhard(0, 0, NULL, 0, 0, NULL, false, false, false, &foundkey, NULL, uid, path) == 1) {
         char* keystr = malloc(14);
         snprintf(keystr, 14, "%012" PRIx64 ";", foundkey);
         return keystr;

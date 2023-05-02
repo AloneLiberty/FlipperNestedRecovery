@@ -33,7 +33,7 @@ hardnested_solver = Extension("hardnested", sources=["HardNestedSolver/pm3/ui.c"
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(name="FlipperNested", version="2.2.2", author="AloneLiberty",
+setuptools.setup(name="FlipperNested", version="2.3.0", author="AloneLiberty",
                  description="Recover keys from collected nonces", long_description=long_description,
                  long_description_content_type="text/markdown",
                  url="https://github.com/AloneLiberty/FlipperNestedRecovery",
@@ -45,7 +45,10 @@ setuptools.setup(name="FlipperNested", version="2.2.2", author="AloneLiberty",
                               "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
                               "Operating System :: MacOS", "Operating System :: POSIX :: Linux",
                               "Operating System :: Microsoft :: Windows"],
-                 headers=["HardNestedSolver/pm3/util.h", "HardNestedSolver/pm3/ui.h", "HardNestedSolver/pm3/common.h",
+                 headers=["NestedSolver/library.h", "NestedSolver/parity.h",
+                          "NestedSolver/crapto1.h", "NestedSolver/bucketsort.h",
+                          "NestedSolver/progress.h", "HardNestedSolver/pm3/util.h", "HardNestedSolver/pm3/ui.h",
+                          "HardNestedSolver/pm3/common.h",
                           "HardNestedSolver/pm3/util_posix.h", "HardNestedSolver/pm3/ansi.h",
                           "HardNestedSolver/pm3/commonutil.h", "HardNestedSolver/pm3/emojis_alt.h",
                           "HardNestedSolver/pm3/emojis.h", "HardNestedSolver/bucketsort.h",
