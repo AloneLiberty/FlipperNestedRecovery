@@ -168,9 +168,10 @@ class FlipperNested:
                 if self.save:
                     open(file["name"], "w+").write(contents)
                     print("[?] Saved nonces to", file["name"])
-                if self.recover_keys():
-                    break
+                stop = self.recover_keys()
                 self.save_keys_to_flipper()
+                if stop:
+                    break
 
     def extract_nonces_from_file(self, file):
         self.filename = file.name
