@@ -33,7 +33,7 @@ hardnested_solver = Extension("hardnested", sources=["HardNestedSolver/pm3/ui.c"
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(name="FlipperNested", version="2.3.1", author="AloneLiberty",
+setuptools.setup(name="FlipperNested", version="2.3.2", author="AloneLiberty",
                  description="Recover keys from collected nonces", long_description=long_description,
                  long_description_content_type="text/markdown",
                  url="https://github.com/AloneLiberty/FlipperNestedRecovery",
@@ -42,6 +42,7 @@ setuptools.setup(name="FlipperNested", version="2.3.1", author="AloneLiberty",
                  packages=["FlipperNested", "FlipperNested.proto"], python_requires=">=3.8",
                  classifiers=["Programming Language :: Python :: 3.8", "Programming Language :: Python :: 3.9",
                               "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11",
+                              "Programming Language :: Python :: 3.12",
                               "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
                               "Operating System :: MacOS", "Operating System :: POSIX :: Linux",
                               "Operating System :: Microsoft :: Windows"],

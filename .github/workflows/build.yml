@@ -44,7 +44,7 @@ jobs:
           robocopy liblzma\lib\x64 build\lzma /COPYALL /E || true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.12.1
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
@@ -55,7 +55,7 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --add-path build\\pthreads;build\\lzma -w {dest_dir} {wheel}"
           CIBW_BEFORE_ALL_LINUX: "yum install -y xz xz-devel || apk add xz-dev"
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-*"
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
 
       - uses: actions/upload-artifact@v3
         with:
